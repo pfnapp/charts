@@ -4,13 +4,9 @@ on:
   push:
     branches:
       - main
-    paths:
-      - "pfnapp/**"
   pull_request:
     branches:
       - main
-    paths:
-      - "pfnapp/**"
   workflow_dispatch:
 
 jobs:
@@ -54,7 +50,6 @@ jobs:
 
   release:
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     permissions:
       contents: write
     steps:
