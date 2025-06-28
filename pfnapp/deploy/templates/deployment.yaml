@@ -17,8 +17,12 @@ spec:
       {{- with .Values.podAnnotations }}
       annotations:
         {{- toYaml . | nindent 8 }}
+        {{- if .Values.logging.enabled }}
+        enableLog: "true"
+        {{- end }}
       {{- end }}
-      {{- if .Values.logging.enabled }}
+      {{- if and (not .Values.podAnnotations) .Values.logging.enabled }}
+      annotations:
         enableLog: "true"
       {{- end }}
       labels:
@@ -35,15 +39,17 @@ spec:
       nodeSelector:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- with .Values.tolerations }}
+      {{- if or .Values.tolerations .Values.logging.enabled }}
       tolerations:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
-      {{- if .Values.logging.enabled }}
+        {{- if .Values.tolerations }}
+        {{- toYaml .Values.tolerations | nindent 8 }}
+        {{- end }}
+        {{- if .Values.logging.enabled }}
         - key: "logging"
           operator: "Equal"
           value: "true"
           effect: "NoSchedule"
+        {{- end }}
       {{- end }}
       {{- with .Values.affinity }}
       affinity:
