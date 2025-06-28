@@ -1,0 +1,161 @@
+# Claude Code files
+.claude
+CLAUDE.md
+
+# Helm
+charts/*/charts/
+charts/*/Chart.lock
+charts/*/requirements.lock
+*.tgz
+
+# Dependencies
+pfnapp/*/charts/
+pfnapp/*/Chart.lock
+pfnapp/*/requirements.lock
+
+# Packaged charts
+*.tgz
+
+# Helm repository index
+index.yaml
+
+# Temporary files
+.tmp/
+tmp/
+temp/
+
+# IDE and Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Operating System files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Dependency directories
+node_modules/
+.npm
+.yarn/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Local development
+.secrets/
+secrets/
+*.secret
+
+# Backup files
+*.bak
+*.backup
+*.orig
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# Kubernetes
+kubeconfig
+*.kubeconfig
+
+# Helm testing
+test-output/
+test-results/
+
+# Build artifacts
+dist/
+build/
+out/
+
+# Cached data
+.cache/
+*.cache
+
+# Local chart testing
+ct.yaml
+kind-config.yaml
+
+# GPG keys (if using signed charts)
+*.gpg
+*.asc
+secring.gpg
+
+# Documentation build
+docs/_build/
+site/
+
+# Python (if using Python scripts)
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Go (if using Go tools)
+vendor/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Java (if using Java tools)
+*.class
+*.jar
+*.war
+*.ear
+*.zip
+*.tar.gz
+*.rar
+hs_err_pid*
+
+# Terraform (if using Terraform for infrastructure)
+*.tfstate
+*.tfstate.*
+.terraform/
+*.tfvars
+
+# Ansible (if using Ansible)
+*.retry
+
+# Local development overrides
+values-local.yaml
+values-dev.yaml
+values-override.yaml
+local-values.yaml
+
+# Chart testing and validation
+.ct/
+chart-testing/
+
+# Helm plugins
+.helm/

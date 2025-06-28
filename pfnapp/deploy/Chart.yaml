@@ -1,0 +1,16 @@
+apiVersion: v2
+name: deploy
+description: A dynamic Helm chart for deploying applications with configurable deployment types, environment variables, ingress, and logging
+type: application
+version: 0.1.0
+appVersion: "1.0"
+home: https://github.com/your-org/pfnapp
+maintainers:
+  - name: pfnapp-team
+keywords:
+  - deployment
+  - statefulset
+  - ingress
+  - haproxy
+  - configmap
+  - secret

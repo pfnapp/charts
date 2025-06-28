@@ -1,0 +1,112 @@
+# Default values for deploy chart
+# This is a YAML-formatted file.
+
+# Application configuration
+app:
+  name: "myapp"
+  version: "latest"
+
+# Deployment type: "deployment" or "statefulset"
+deploymentType: "deployment"
+
+# Replica count
+replicaCount: 1
+
+# Image configuration
+image:
+  repository: "nginx"
+  tag: "latest"
+  pullPolicy: IfNotPresent
+
+# Image pull secrets
+imagePullSecrets: []
+
+# Service account
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+# Pod annotations
+podAnnotations: {}
+
+# Pod security context
+podSecurityContext: {}
+
+# Container security context
+securityContext: {}
+
+# Resource limits and requests
+resources: {}
+
+# Autoscaling configuration
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+
+# Node selector
+nodeSelector: {}
+
+# Tolerations for taints
+tolerations: []
+
+# Affinity rules
+affinity: {}
+
+# Service configuration
+service:
+  enabled: true
+  type: ClusterIP
+  port: 80
+  targetPort: 80
+  annotations: {}
+
+# Ingress configuration with HAProxy
+ingress:
+  enabled: false
+  className: "haproxy"
+  annotations:
+    haproxy.org/load-balance: "roundrobin"
+  hosts:
+    - host: chart-example.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+# Environment variables from ConfigMap
+configMap:
+  enabled: false
+  data: {}
+
+# Environment variables from Secret
+secret:
+  enabled: false
+  data: {}
+
+# Logging configuration
+logging:
+  enabled: false
+  # When enabled, appends "-service" to deployment name and adds log taints
+
+# StatefulSet specific configuration
+statefulset:
+  serviceName: ""
+  volumeClaimTemplates: []
+
+# Container ports
+containerPorts:
+  - containerPort: 80
+    name: http
+
+# Liveness and readiness probes
+livenessProbe: {}
+readinessProbe: {}
+
+# Volume mounts
+volumeMounts: []
+
+# Volumes
+volumes: []
