@@ -28,22 +28,48 @@ The charts are automatically published to GitHub Pages via GitHub Actions. You c
    helm repo update
    ```
 
-2. **Install the Nginx chart:**
+2. **List available charts:**
+   ```bash
+   helm search repo pfnapp
+   ```
+   
+   This will show:
+   ```
+   NAME         	CHART VERSION	APP VERSION	DESCRIPTION                                       
+   pfnapp/deploy	0.1.1        	1.0        	A dynamic Helm chart for deploying applications...
+   pfnapp/nginx 	0.1.1        	1.24       	A simple Nginx deployment chart using the dynam...
+   ```
+
+3. **Get chart details:**
+   ```bash
+   helm show chart pfnapp/deploy
+   helm show chart pfnapp/nginx
+   helm show values pfnapp/deploy
+   helm show values pfnapp/nginx
+   ```
+
+4. **Install the Nginx chart:**
    ```bash
    helm install my-nginx pfnapp/nginx
    ```
 
-3. **Install the deploy chart:**
+5. **Install the deploy chart:**
    ```bash
    helm install my-app pfnapp/deploy \
      --set image.repository=nginx \
      --set image.tag=latest
    ```
 
-4. **Check the deployment:**
+6. **Check the deployment:**
    ```bash
    kubectl get pods,svc,ingress
    ```
+
+### Repository Information
+
+- **Repository URL:** https://pfnapp.github.io/charts
+- **GitHub Releases:** https://github.com/pfnapp/charts/releases
+- **Chart Versions:** Both charts are currently at v0.1.1
 
 ### Local Development
 
