@@ -28,7 +28,13 @@ jobs:
         run: |
           # Add any external chart repositories your charts depend on
           # Example: helm repo add bitnami https://charts.bitnami.com/bitnami
-          helm repo update
+          
+          # Only update if repositories exist
+          if helm repo list >/dev/null 2>&1; then
+            helm repo update
+          else
+            echo "No repositories configured, skipping update"
+          fi
 
       - name: Lint charts
         run: |
@@ -72,7 +78,13 @@ jobs:
         run: |
           # Add any external chart repositories your charts depend on
           # Example: helm repo add bitnami https://charts.bitnami.com/bitnami
-          helm repo update
+          
+          # Only update if repositories exist
+          if helm repo list >/dev/null 2>&1; then
+            helm repo update
+          else
+            echo "No repositories configured, skipping update"
+          fi
 
       - name: Update chart dependencies
         run: |
