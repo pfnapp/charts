@@ -63,7 +63,7 @@ service:
   targetPort: 80
   annotations: {}
 
-# Ingress configuration with HAProxy
+# Single Ingress configuration (legacy support)
 ingress:
   enabled: false
   className: "haproxy"
@@ -75,6 +75,68 @@ ingress:
         - path: /
           pathType: Prefix
   tls: []
+
+# Multiple Ingresses configuration (advanced)
+# Use this for multiple ingress classes, different annotations per domain, etc.
+ingresses: {}
+  # Example configuration:
+  # public:
+  #   enabled: true
+  #   className: "haproxy"
+  #   annotations:
+  #     haproxy.org/load-balance: "roundrobin"
+  #     haproxy.org/check: "true"
+  #   hosts:
+  #     - host: myapp.example.com
+  #       paths:
+  #         - path: /
+  #           pathType: Prefix
+  #   tls:
+  #     - secretName: myapp-tls
+  #       hosts:
+  #         - myapp.example.com
+  # 
+  # admin:
+  #   enabled: true
+  #   className: "nginx"
+  #   annotations:
+  #     nginx.ingress.kubernetes.io/auth-type: basic
+  #     nginx.ingress.kubernetes.io/auth-secret: admin-auth
+  #   hosts:
+  #     - host: admin.myapp.example.com
+  #       paths:
+  #         - path: /admin
+  #           pathType: Prefix
+  #   tls:
+  #     - secretName: admin-tls
+  #       hosts:
+  #         - admin.myapp.example.com
+
+# Domain-based Ingress configuration (generates ingress names from domains)
+# Each domain gets its own ingress resource named after the domain
+ingressDomains: []
+  # Example configuration:
+  # - enabled: true
+  #   host: "myapp.example.com"
+  #   className: "haproxy"
+  #   tls: true
+  #   tlsSecret: "myapp-example-com-tls"  # Optional, auto-generated if not specified
+  #   annotations:
+  #     haproxy.org/load-balance: "roundrobin"
+  #     haproxy.org/check: "true"
+  #   paths:
+  #     - path: /
+  #       pathType: Prefix
+  # - enabled: true
+  #   host: "admin.myapp.example.com"
+  #   className: "nginx"
+  #   tls: true
+  #   annotations:
+  #     nginx.ingress.kubernetes.io/auth-type: basic
+  #     nginx.ingress.kubernetes.io/auth-secret: admin-auth
+  #   paths:
+  #     - path: /admin
+  #       pathType: Prefix
 
 # Environment variables from ConfigMap
 configMap:
