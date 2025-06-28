@@ -4,7 +4,7 @@ description: A simple Nginx deployment chart using the dynamic deploy chart
 type: application
 version: 0.1.3
 appVersion: "1.24"
-home: https://github.com/your-org/pfnapp
+home: https://github.com/pfnapp/charts
 maintainers:
   - name: pfnapp-team
 keywords:
