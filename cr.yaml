@@ -1,44 +1,8 @@
 # Chart Releaser configuration file
-# This file configures the chart-releaser-action behavior
+# Most settings use sensible defaults, only override when necessary
 
-# The GitHub owner/user for the GitHub Pages branch (default: derived from URL)
-owner: pfnapp
-
-# The GitHub repository name (default: derived from URL)
-repo: charts
-
-# The GitHub Pages branch (default: gh-pages)
-pages-branch: gh-pages
-
-# The charts directory
-charts-dir: pfnapp
-
-# Whether to generate and upload chart packages (default: true)
-packages: true
-
-# Whether to generate and upload an index.yaml (default: true)
-index: true
-
-# Path to the index.yaml relative to the GitHub Pages branch root
-index-path: index.yaml
-
-# Whether to upload chart packages to GitHub Releases (default: true)
-release: true
-
-# Whether to commit and push the updated index.yaml to the GitHub Pages branch (default: true)
-push: true
-
-# Whether to create a GitHub Release for each chart version (default: true)
-make-release: true
-
-# Remote repository URL (default: derived from the current Git repository)
-# remote: origin
-
-# Skip chart dependencies update (default: false)
-skip-dependencies: false
-
-# Skip existing releases (default: false)
+# Skip existing releases to avoid errors on re-runs
 skip-existing: true
 
-# Mark GitHub Releases as draft (default: false)
+# Mark releases as latest
 mark-as-latest: true
