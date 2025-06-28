@@ -5,12 +5,13 @@ on:
     branches:
       - main
     paths:
-      - 'pfnapp/**'
+      - "pfnapp/**"
   pull_request:
     branches:
       - main
     paths:
-      - 'pfnapp/**'
+      - "pfnapp/**"
+  workflow_dispatch:
 
 jobs:
   test:
