@@ -60,3 +60,34 @@ Create the name of the service account to use
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}
 {{- end }}
+
+{{/*
+Generate TLS secret name from domain (replace dots with dashes)
+Usage: {{ include "deploy.tlsSecretName" "example.com" }}
+*/}}
+{{- define "deploy.tlsSecretName" -}}
+{{- . | replace "." "-" | trunc 63 | trimSuffix "-" }}-tls
+{{- end }}
+
+{{/*
+Generate ingress name from domain (replace dots with dashes)
+Usage: {{ include "deploy.ingressName" (dict "fullname" .fullname "domain" "example.com") }}
+*/}}
+{{- define "deploy.ingressName" -}}
+{{- printf "%s-%s" .fullname (.domain | replace "." "-") | trunc 63 | trimSuffix "-" }}
+{{- end }}
+
+{{/*
+Generate external-dns hostname annotation based on domain and externalDns config
+*/}}
+{{- define "deploy.externalDnsHostname" -}}
+{{- if .externalDns.enabled }}
+external-dns.alpha.kubernetes.io/hostname: {{ .domain }}
+{{- if .externalDns.target }}
+external-dns.alpha.kubernetes.io/target: {{ .externalDns.target }}
+{{- end }}
+{{- if hasKey .externalDns "cloudflareProxied" }}
+external-dns.alpha.kubernetes.io/cloudflare-proxied: {{ .externalDns.cloudflareProxied | quote }}
+{{- end }}
+{{- end }}
+{{- end }}

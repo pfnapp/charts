@@ -138,6 +138,28 @@ ingressDomains: []
   #     - path: /admin
   #       pathType: Prefix
 
+# Simplified Ingress configuration with Let's Encrypt and External DNS automation
+# Just provide domain, cert-manager issuer, and external DNS config - everything else is automated
+simpleIngress: []
+  # Example configuration:
+  # - enabled: true
+  #   domain: "metacard-sso-dev.pfnapp.dev"  # Just the domain - host and TLS secret auto-generated
+  #   className: "haproxy"
+  #   tls: true  # Enable TLS - secret name auto-generated as "metacard-sso-dev-pfnapp-dev-tls"
+  #   # tlsSecretName: "custom-tls-secret"  # Optional: override auto-generated TLS secret name
+  #   certManager:
+  #     enabled: true
+  #     issuer: "pfnapp-dev"  # cert-manager cluster issuer name
+  #   externalDns:
+  #     enabled: true
+  #     target: "cname-sg.pfnapp.com"  # external-dns target
+  #     cloudflareProxied: false  # Optional: set cloudflare proxy status
+  #   # paths:  # Optional: defaults to [{"path": "/", "pathType": "Prefix"}]
+  #   #   - path: /
+  #   #     pathType: Prefix
+  #   # annotations:  # Optional: additional custom annotations
+  #   #   custom.annotation/key: "value"
+
 # Environment variables from ConfigMap
 configMap:
   enabled: false
