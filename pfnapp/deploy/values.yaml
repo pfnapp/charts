@@ -384,3 +384,17 @@ simpleMounts: []
   #   configMap: "my-app-config"      # ConfigMap name
   # - mountPath: "/etc/secrets"
   #   secret: "my-app-secrets"        # Secret name
+
+# Simplified persistent volumes - just specify path, size, and storage class
+simpleVolumes: []
+  # Examples:
+  # - mountPath: "/data"              # Required: where to mount in container
+  #   size: "10Gi"                    # Required: storage size
+  #   storageClass: "fast-ssd"        # Required: storage class name
+  #   accessModes: ["ReadWriteOnce"]  # Optional: defaults to ["ReadWriteOnce"]
+  #   name: "data-storage"            # Optional: auto-generated if not provided
+  # - mountPath: "/cache"
+  #   size: "5Gi"
+  #   storageClass: "standard"
+  #   accessModes: ["ReadWriteMany"]
+  #   name: "cache-volume"

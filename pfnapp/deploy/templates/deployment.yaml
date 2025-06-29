@@ -189,7 +189,7 @@ spec:
             {{- end }}
             {{- end }}
           {{- end }}
-          {{- if or .Values.volumeMounts .Values.simpleMounts }}
+          {{- if or .Values.volumeMounts .Values.simpleMounts .Values.simpleVolumes }}
           volumeMounts:
             {{- with .Values.volumeMounts }}
             {{- toYaml . | nindent 12 }}
@@ -198,8 +198,12 @@ spec:
             - name: simple-mount-{{ $index }}
               mountPath: {{ $mount.mountPath }}
             {{- end }}
+            {{- range $index, $volume := .Values.simpleVolumes }}
+            - name: {{ $volume.name | default (printf "simple-volume-%d" $index) }}
+              mountPath: {{ $volume.mountPath }}
+            {{- end }}
           {{- end }}
-      {{- if or .Values.volumes .Values.simpleMounts }}
+      {{- if or .Values.volumes .Values.simpleMounts .Values.simpleVolumes }}
       volumes:
         {{- with .Values.volumes }}
         {{- toYaml . | nindent 8 }}
@@ -214,5 +218,29 @@ spec:
             secretName: {{ $mount.secret }}
           {{- end }}
         {{- end }}
+        {{- range $index, $volume := .Values.simpleVolumes }}
+        - name: {{ $volume.name | default (printf "simple-volume-%d" $index) }}
+          persistentVolumeClaim:
+            claimName: {{ include "deploy.fullname" $ }}-{{ $volume.name | default (printf "simple-volume-%d" $index) }}
+        {{- end }}
       {{- end }}
+---
+{{- range $index, $volume := .Values.simpleVolumes }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "deploy.fullname" $ }}-{{ $volume.name | default (printf "simple-volume-%d" $index) }}
+  labels:
+    {{- include "deploy.labels" $ | nindent 4 }}
+spec:
+  accessModes:
+    {{- range $volume.accessModes | default (list "ReadWriteOnce") }}
+    - {{ . }}
+    {{- end }}
+  storageClassName: {{ $volume.storageClass }}
+  resources:
+    requests:
+      storage: {{ $volume.size }}
+---
+{{- end }}
 {{- end }}

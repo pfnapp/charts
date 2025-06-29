@@ -184,7 +184,7 @@ spec:
             {{- end }}
             {{- end }}
           {{- end }}
-          {{- if or .Values.volumeMounts .Values.simpleMounts }}
+          {{- if or .Values.volumeMounts .Values.simpleMounts .Values.simpleVolumes }}
           volumeMounts:
             {{- with .Values.volumeMounts }}
             {{- toYaml . | nindent 12 }}
@@ -192,6 +192,10 @@ spec:
             {{- range $index, $mount := .Values.simpleMounts }}
             - name: simple-mount-{{ $index }}
               mountPath: {{ $mount.mountPath }}
+            {{- end }}
+            {{- range $index, $volume := .Values.simpleVolumes }}
+            - name: {{ $volume.name | default (printf "simple-volume-%d" $index) }}
+              mountPath: {{ $volume.mountPath }}
             {{- end }}
           {{- end }}
       {{- if or .Values.volumes .Values.simpleMounts }}
@@ -210,8 +214,23 @@ spec:
           {{- end }}
         {{- end }}
       {{- end }}
-  {{- if .Values.statefulset.volumeClaimTemplates }}
+  {{- if or .Values.statefulset.volumeClaimTemplates .Values.simpleVolumes }}
   volumeClaimTemplates:
-    {{- toYaml .Values.statefulset.volumeClaimTemplates | nindent 4 }}
+    {{- with .Values.statefulset.volumeClaimTemplates }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+    {{- range $index, $volume := .Values.simpleVolumes }}
+    - metadata:
+        name: {{ $volume.name | default (printf "simple-volume-%d" $index) }}
+      spec:
+        accessModes:
+          {{- range $volume.accessModes | default (list "ReadWriteOnce") }}
+          - {{ . }}
+          {{- end }}
+        storageClassName: {{ $volume.storageClass }}
+        resources:
+          requests:
+            storage: {{ $volume.size }}
+    {{- end }}
   {{- end }}
 {{- end }}

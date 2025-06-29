@@ -357,6 +357,32 @@ simpleMounts:
     secret: "my-app-secrets"
 ```
 
+### Simple Volumes
+
+Quick persistent volume setup - just specify path, size, and storage class:
+
+```yaml
+simpleVolumes:
+  # Minimal configuration with defaults
+  - mountPath: "/data"
+    size: "10Gi"
+    storageClass: "fast-ssd"
+  
+  # With custom access modes
+  - mountPath: "/cache"
+    size: "5Gi"
+    storageClass: "standard"
+    accessModes: ["ReadWriteMany"]
+    name: "shared-cache"
+```
+
+**Simple Volume Features:**
+- **Automatic PVC Creation**: For deployments, creates PersistentVolumeClaims automatically
+- **StatefulSet Integration**: For StatefulSets, adds to volumeClaimTemplates
+- **Default Access Mode**: Uses `ReadWriteOnce` if not specified
+- **Auto-naming**: Generates volume names if not provided
+- **Flexible**: Works with both deployment and StatefulSet types
+
 ### StatefulSet Configuration
 
 ```yaml
@@ -438,15 +464,12 @@ secret:
   data:
     POSTGRES_PASSWORD: "cG9zdGdyZXNwYXNz"  # "postgrespass" base64
 
-statefulset:
-  volumeClaimTemplates:
-    - metadata:
-        name: postgres-storage
-      spec:
-        accessModes: ["ReadWriteOnce"]
-        resources:
-          requests:
-            storage: "20Gi"
+# Using simplified volumes instead of manual volumeClaimTemplates
+simpleVolumes:
+  - mountPath: "/var/lib/postgresql/data"
+    size: "20Gi"
+    storageClass: "fast-ssd"
+    name: "postgres-data"
 
 resources:
   requests:
