@@ -153,13 +153,69 @@ spec:
             {{- end }}
             {{- end }}
           {{- end }}
-          {{- with .Values.volumeMounts }}
+          {{- if or .Values.volumeMounts .Values.simpleMounts }}
           volumeMounts:
+            {{- with .Values.volumeMounts }}
             {{- toYaml . | nindent 12 }}
+            {{- end }}
+            {{- range .Values.simpleMounts }}
+            - name: {{ .name }}
+              mountPath: {{ .mountPath }}
+              {{- if .subPath }}
+              subPath: {{ .subPath }}
+              {{- end }}
+              {{- if .readOnly }}
+              readOnly: {{ .readOnly }}
+              {{- end }}
+            {{- end }}
           {{- end }}
-      {{- with .Values.volumes }}
+      {{- if or .Values.volumes .Values.simpleMounts }}
       volumes:
+        {{- with .Values.volumes }}
         {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- range .Values.simpleMounts }}
+        - name: {{ .name }}
+          {{- if .configMap }}
+          configMap:
+            name: {{ .configMap.name }}
+            {{- if .configMap.items }}
+            items:
+              {{- range .configMap.items }}
+              - key: {{ .key }}
+                path: {{ .path }}
+                {{- if .mode }}
+                mode: {{ .mode }}
+                {{- end }}
+              {{- end }}
+            {{- end }}
+            {{- if .configMap.defaultMode }}
+            defaultMode: {{ .configMap.defaultMode }}
+            {{- end }}
+            {{- if .configMap.optional }}
+            optional: {{ .configMap.optional }}
+            {{- end }}
+          {{- else if .secret }}
+          secret:
+            secretName: {{ .secret.name }}
+            {{- if .secret.items }}
+            items:
+              {{- range .secret.items }}
+              - key: {{ .key }}
+                path: {{ .path }}
+                {{- if .mode }}
+                mode: {{ .mode }}
+                {{- end }}
+              {{- end }}
+            {{- end }}
+            {{- if .secret.defaultMode }}
+            defaultMode: {{ .secret.defaultMode }}
+            {{- end }}
+            {{- if .secret.optional }}
+            optional: {{ .secret.optional }}
+            {{- end }}
+          {{- end }}
+        {{- end }}
       {{- end }}
   {{- if .Values.statefulset.volumeClaimTemplates }}
   volumeClaimTemplates:

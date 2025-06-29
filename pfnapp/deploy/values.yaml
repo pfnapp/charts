@@ -20,6 +20,8 @@ image:
 
 # Image pull secrets
 imagePullSecrets: []
+  # Example:
+  # - name: myregistrykey
 
 # Service account
 serviceAccount:
@@ -29,15 +31,37 @@ serviceAccount:
 
 # Pod annotations
 podAnnotations: {}
+  # Example:
+  # prometheus.io/scrape: "true"
+  # prometheus.io/port: "8080"
 
 # Pod security context
 podSecurityContext: {}
+  # Example:
+  # runAsNonRoot: true
+  # runAsUser: 1001
+  # fsGroup: 2000
 
 # Container security context
 securityContext: {}
+  # Example:
+  # allowPrivilegeEscalation: false
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1001
+  # capabilities:
+  #   drop:
+  #   - ALL
 
 # Resource limits and requests
 resources: {}
+  # Example:
+  # limits:
+  #   cpu: 500m
+  #   memory: 512Mi
+  # requests:
+  #   cpu: 250m
+  #   memory: 256Mi
 
 # Autoscaling configuration
 autoscaling:
@@ -48,12 +72,44 @@ autoscaling:
 
 # Node selector
 nodeSelector: {}
+  # Example:
+  # disktype: ssd
+  # kubernetes.io/arch: amd64
 
 # Tolerations for taints
 tolerations: []
+  # Example:
+  # - key: "key1"
+  #   operator: "Equal"
+  #   value: "value1"
+  #   effect: "NoSchedule"
+  # - key: "key2"
+  #   operator: "Exists"
+  #   effect: "NoExecute"
+  #   tolerationSeconds: 3600
 
 # Affinity rules
 affinity: {}
+  # Example:
+  # nodeAffinity:
+  #   requiredDuringSchedulingIgnoredDuringExecution:
+  #     nodeSelectorTerms:
+  #     - matchExpressions:
+  #       - key: kubernetes.io/arch
+  #         operator: In
+  #         values:
+  #         - amd64
+  # podAntiAffinity:
+  #   preferredDuringSchedulingIgnoredDuringExecution:
+  #   - weight: 100
+  #     podAffinityTerm:
+  #       labelSelector:
+  #         matchExpressions:
+  #         - key: app
+  #           operator: In
+  #           values:
+  #           - myapp
+  #       topologyKey: kubernetes.io/hostname
 
 # Service configuration
 service:
@@ -64,17 +120,17 @@ service:
   annotations: {}
 
 # Single Ingress configuration (legacy support)
-ingress:
-  enabled: false
-  className: "haproxy"
-  annotations:
-    haproxy.org/load-balance: "roundrobin"
-  hosts:
-    - host: chart-example.local
-      paths:
-        - path: /
-          pathType: Prefix
-  tls: []
+ingress: {}
+  # enabled: false
+  # className: "haproxy"
+  # annotations:
+  #   haproxy.org/load-balance: "roundrobin"
+  # hosts:
+  #   - host: chart-example.local
+  #     paths:
+  #       - path: /
+  #         pathType: Prefix
+  # tls: []
 
 # Multiple Ingresses configuration (advanced)
 # Use this for multiple ingress classes, different annotations per domain, etc.
@@ -164,11 +220,18 @@ simpleIngress: []
 configMap:
   enabled: false
   data: {}
+    # Example:
+    # DATABASE_HOST: "postgres.example.com"
+    # DATABASE_PORT: "5432"
+    # LOG_LEVEL: "info"
 
 # Environment variables from Secret (creates Secret managed by Helm)
 secret:
   enabled: false
   data: {}
+    # Example:
+    # DATABASE_PASSWORD: "c2VjcmV0cGFzcw=="  # base64 encoded
+    # API_TOKEN: "dG9rZW4xMjM="          # base64 encoded
 
 # Environment variables (supports both direct values and references to external ConfigMaps/Secrets)
 env: []
@@ -213,8 +276,17 @@ logging:
 
 # StatefulSet specific configuration
 statefulset:
-  serviceName: ""
+  serviceName: ""  # Leave empty to auto-generate same as service name
   volumeClaimTemplates: []
+    # Example:
+    # - metadata:
+    #     name: data
+    #   spec:
+    #     accessModes: ["ReadWriteOnce"]
+    #     storageClassName: "fast-ssd"
+    #     resources:
+    #       requests:
+    #         storage: 10Gi
 
 # Container ports
 containerPorts:
@@ -223,10 +295,50 @@ containerPorts:
 
 # Liveness and readiness probes
 livenessProbe: {}
+  # Example:
+  # httpGet:
+  #   path: /health
+  #   port: http
+  # initialDelaySeconds: 30
+  # periodSeconds: 10
+  # timeoutSeconds: 5
+  # failureThreshold: 3
 readinessProbe: {}
+  # Example:
+  # httpGet:
+  #   path: /ready
+  #   port: http
+  # initialDelaySeconds: 5
+  # periodSeconds: 5
+  # timeoutSeconds: 3
+  # failureThreshold: 3
 
-# Volume mounts
+# Volume mounts (standard Kubernetes volumeMounts)
 volumeMounts: []
+  # Example:
+  # - name: config-volume
+  #   mountPath: /etc/config
+  #   readOnly: true
+  # - name: data-volume
+  #   mountPath: /data
 
-# Volumes
+# Volumes (standard Kubernetes volumes)
 volumes: []
+  # Example:
+  # - name: config-volume
+  #   configMap:
+  #     name: my-config
+  # - name: data-volume
+  #   persistentVolumeClaim:
+  #     claimName: data-pvc
+  # - name: secret-volume
+  #   secret:
+  #     secretName: my-secret
+
+# Simple file mounts for external ConfigMaps/Secrets
+simpleMounts: []
+  # Examples:
+  # - mountPath: "/etc/config"        # Where to mount
+  #   configMap: "my-app-config"      # ConfigMap name
+  # - mountPath: "/etc/secrets"
+  #   secret: "my-app-secrets"        # Secret name
