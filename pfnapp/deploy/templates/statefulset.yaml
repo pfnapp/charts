@@ -9,7 +9,7 @@ spec:
   {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.replicaCount }}
   {{- end }}
-  serviceName: {{ .Values.statefulset.serviceName | default (printf "%s-headless" (include "deploy.fullname" .)) }}
+  serviceName: {{ .Values.statefulset.serviceName | default (include "deploy.fullname" .) }}
   selector:
     matchLabels:
       {{- include "deploy.selectorLabels" . | nindent 6 }}
@@ -158,15 +158,9 @@ spec:
             {{- with .Values.volumeMounts }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
-            {{- range .Values.simpleMounts }}
-            - name: {{ .name }}
-              mountPath: {{ .mountPath }}
-              {{- if .subPath }}
-              subPath: {{ .subPath }}
-              {{- end }}
-              {{- if .readOnly }}
-              readOnly: {{ .readOnly }}
-              {{- end }}
+            {{- range $index, $mount := .Values.simpleMounts }}
+            - name: simple-mount-{{ $index }}
+              mountPath: {{ $mount.mountPath }}
             {{- end }}
           {{- end }}
       {{- if or .Values.volumes .Values.simpleMounts }}
@@ -174,46 +168,14 @@ spec:
         {{- with .Values.volumes }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
-        {{- range .Values.simpleMounts }}
-        - name: {{ .name }}
-          {{- if .configMap }}
+        {{- range $index, $mount := .Values.simpleMounts }}
+        - name: simple-mount-{{ $index }}
+          {{- if $mount.configMap }}
           configMap:
-            name: {{ .configMap.name }}
-            {{- if .configMap.items }}
-            items:
-              {{- range .configMap.items }}
-              - key: {{ .key }}
-                path: {{ .path }}
-                {{- if .mode }}
-                mode: {{ .mode }}
-                {{- end }}
-              {{- end }}
-            {{- end }}
-            {{- if .configMap.defaultMode }}
-            defaultMode: {{ .configMap.defaultMode }}
-            {{- end }}
-            {{- if .configMap.optional }}
-            optional: {{ .configMap.optional }}
-            {{- end }}
-          {{- else if .secret }}
+            name: {{ $mount.configMap }}
+          {{- else if $mount.secret }}
           secret:
-            secretName: {{ .secret.name }}
-            {{- if .secret.items }}
-            items:
-              {{- range .secret.items }}
-              - key: {{ .key }}
-                path: {{ .path }}
-                {{- if .mode }}
-                mode: {{ .mode }}
-                {{- end }}
-              {{- end }}
-            {{- end }}
-            {{- if .secret.defaultMode }}
-            defaultMode: {{ .secret.defaultMode }}
-            {{- end }}
-            {{- if .secret.optional }}
-            optional: {{ .secret.optional }}
-            {{- end }}
+            secretName: {{ $mount.secret }}
           {{- end }}
         {{- end }}
       {{- end }}
