@@ -313,6 +313,48 @@ readinessProbe: {}
   # timeoutSeconds: 3
   # failureThreshold: 3
 
+# Startup probe
+startupProbe: {}
+  # Example:
+  # httpGet:
+  #   path: /health
+  #   port: http
+  # initialDelaySeconds: 10
+  # periodSeconds: 5
+  # timeoutSeconds: 3
+  # failureThreshold: 30
+
+# Simplified probes - just provide path and optionally port, other values use defaults
+simpleLivenessProbe: {}
+  # Example:
+  # httpGet:
+  #   path: "/health"           # Required
+  #   port: "http"              # Optional: defaults to "http"
+  # initialDelaySeconds: 30     # Optional: defaults to 30
+  # periodSeconds: 10           # Optional: defaults to 10
+  # timeoutSeconds: 5           # Optional: defaults to 5
+  # failureThreshold: 3         # Optional: defaults to 3
+
+simpleReadinessProbe: {}
+  # Example:
+  # httpGet:
+  #   path: "/ready"            # Required
+  #   port: "http"              # Optional: defaults to "http"
+  # initialDelaySeconds: 5      # Optional: defaults to 5
+  # periodSeconds: 5            # Optional: defaults to 5
+  # timeoutSeconds: 3           # Optional: defaults to 3
+  # failureThreshold: 3         # Optional: defaults to 3
+
+simpleStartupProbe: {}
+  # Example:
+  # httpGet:
+  #   path: "/health"           # Required
+  #   port: "http"              # Optional: defaults to "http"
+  # initialDelaySeconds: 10     # Optional: defaults to 10
+  # periodSeconds: 5            # Optional: defaults to 5
+  # timeoutSeconds: 3           # Optional: defaults to 3
+  # failureThreshold: 30        # Optional: defaults to 30
+
 # Volume mounts (standard Kubernetes volumeMounts)
 volumeMounts: []
   # Example:

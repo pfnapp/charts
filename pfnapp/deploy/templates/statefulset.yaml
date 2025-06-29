@@ -65,10 +65,41 @@ spec:
           {{- if .Values.livenessProbe }}
           livenessProbe:
             {{- toYaml .Values.livenessProbe | nindent 12 }}
+          {{- else if .Values.simpleLivenessProbe.httpGet.path }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.simpleLivenessProbe.httpGet.path }}
+              port: {{ .Values.simpleLivenessProbe.httpGet.port | default "http" }}
+            initialDelaySeconds: {{ .Values.simpleLivenessProbe.initialDelaySeconds | default 30 }}
+            periodSeconds: {{ .Values.simpleLivenessProbe.periodSeconds | default 10 }}
+            timeoutSeconds: {{ .Values.simpleLivenessProbe.timeoutSeconds | default 5 }}
+            failureThreshold: {{ .Values.simpleLivenessProbe.failureThreshold | default 3 }}
           {{- end }}
           {{- if .Values.readinessProbe }}
           readinessProbe:
             {{- toYaml .Values.readinessProbe | nindent 12 }}
+          {{- else if .Values.simpleReadinessProbe.httpGet.path }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.simpleReadinessProbe.httpGet.path }}
+              port: {{ .Values.simpleReadinessProbe.httpGet.port | default "http" }}
+            initialDelaySeconds: {{ .Values.simpleReadinessProbe.initialDelaySeconds | default 5 }}
+            periodSeconds: {{ .Values.simpleReadinessProbe.periodSeconds | default 5 }}
+            timeoutSeconds: {{ .Values.simpleReadinessProbe.timeoutSeconds | default 3 }}
+            failureThreshold: {{ .Values.simpleReadinessProbe.failureThreshold | default 3 }}
+          {{- end }}
+          {{- if .Values.startupProbe }}
+          startupProbe:
+            {{- toYaml .Values.startupProbe | nindent 12 }}
+          {{- else if .Values.simpleStartupProbe.httpGet.path }}
+          startupProbe:
+            httpGet:
+              path: {{ .Values.simpleStartupProbe.httpGet.path }}
+              port: {{ .Values.simpleStartupProbe.httpGet.port | default "http" }}
+            initialDelaySeconds: {{ .Values.simpleStartupProbe.initialDelaySeconds | default 10 }}
+            periodSeconds: {{ .Values.simpleStartupProbe.periodSeconds | default 5 }}
+            timeoutSeconds: {{ .Values.simpleStartupProbe.timeoutSeconds | default 3 }}
+            failureThreshold: {{ .Values.simpleStartupProbe.failureThreshold | default 30 }}
           {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
