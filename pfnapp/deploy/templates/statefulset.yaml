@@ -72,7 +72,7 @@ spec:
           {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
-          {{- if or .Values.configMap.enabled .Values.secret.enabled }}
+          {{- if or .Values.configMap.enabled .Values.secret.enabled .Values.env .Values.envFrom }}
           env:
             {{- if .Values.configMap.enabled }}
             - name: CONFIG_MAP_NAME
@@ -95,6 +95,61 @@ spec:
                 secretKeyRef:
                   name: {{ include "deploy.fullname" $ }}-secret
                   key: {{ $key }}
+            {{- end }}
+            {{- end }}
+            {{- if .Values.env }}
+            {{- range .Values.env }}
+            - name: {{ .name }}
+              {{- if .value }}
+              value: {{ .value | quote }}
+              {{- else if .valueFrom }}
+              valueFrom:
+                {{- if .valueFrom.configMapKeyRef }}
+                configMapKeyRef:
+                  name: {{ .valueFrom.configMapKeyRef.name }}
+                  key: {{ .valueFrom.configMapKeyRef.key }}
+                  {{- if .valueFrom.configMapKeyRef.optional }}
+                  optional: {{ .valueFrom.configMapKeyRef.optional }}
+                  {{- end }}
+                {{- else if .valueFrom.secretKeyRef }}
+                secretKeyRef:
+                  name: {{ .valueFrom.secretKeyRef.name }}
+                  key: {{ .valueFrom.secretKeyRef.key }}
+                  {{- if .valueFrom.secretKeyRef.optional }}
+                  optional: {{ .valueFrom.secretKeyRef.optional }}
+                  {{- end }}
+                {{- else if .valueFrom.fieldRef }}
+                fieldRef:
+                  fieldPath: {{ .valueFrom.fieldRef.fieldPath }}
+                {{- else if .valueFrom.resourceFieldRef }}
+                resourceFieldRef:
+                  resource: {{ .valueFrom.resourceFieldRef.resource }}
+                  {{- if .valueFrom.resourceFieldRef.containerName }}
+                  containerName: {{ .valueFrom.resourceFieldRef.containerName }}
+                  {{- end }}
+                  {{- if .valueFrom.resourceFieldRef.divisor }}
+                  divisor: {{ .valueFrom.resourceFieldRef.divisor }}
+                  {{- end }}
+                {{- end }}
+              {{- end }}
+            {{- end }}
+            {{- end }}
+          {{- end }}
+          {{- if .Values.envFrom }}
+          envFrom:
+            {{- range .Values.envFrom }}
+            {{- if .configMapRef }}
+            - configMapRef:
+                name: {{ .configMapRef.name }}
+                {{- if .configMapRef.optional }}
+                optional: {{ .configMapRef.optional }}
+                {{- end }}
+            {{- else if .secretRef }}
+            - secretRef:
+                name: {{ .secretRef.name }}
+                {{- if .secretRef.optional }}
+                optional: {{ .secretRef.optional }}
+                {{- end }}
             {{- end }}
             {{- end }}
           {{- end }}

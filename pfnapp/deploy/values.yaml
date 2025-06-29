@@ -160,15 +160,51 @@ simpleIngress: []
   #   # annotations:  # Optional: additional custom annotations
   #   #   custom.annotation/key: "value"
 
-# Environment variables from ConfigMap
+# Environment variables from ConfigMap (creates ConfigMap managed by Helm)
 configMap:
   enabled: false
   data: {}
 
-# Environment variables from Secret
+# Environment variables from Secret (creates Secret managed by Helm)
 secret:
   enabled: false
   data: {}
+
+# Environment variables (supports both direct values and references to external ConfigMaps/Secrets)
+env: []
+  # Examples:
+  # - name: "ENVIRONMENT"           # Direct value
+  #   value: "production"
+  # - name: "DATABASE_URL"          # From external ConfigMap
+  #   valueFrom:
+  #     configMapKeyRef:
+  #       name: "database-config"
+  #       key: "url"
+  #       optional: false           # Optional: set to true if the key might not exist
+  # - name: "API_KEY"               # From external Secret
+  #   valueFrom:
+  #     secretKeyRef:
+  #       name: "api-secrets"
+  #       key: "key"
+  #       optional: false
+  # - name: "POD_NAME"              # From field reference
+  #   valueFrom:
+  #     fieldRef:
+  #       fieldPath: "metadata.name"
+  # - name: "CPU_REQUEST"           # From resource field reference
+  #   valueFrom:
+  #     resourceFieldRef:
+  #       resource: "requests.cpu"
+
+# Environment variables from external ConfigMaps/Secrets (loads all keys as env vars)
+envFrom: []
+  # Examples:
+  # - configMapRef:                 # Load all keys from external ConfigMap
+  #     name: "app-config"
+  #     optional: false             # Optional: set to true if ConfigMap might not exist
+  # - secretRef:                    # Load all keys from external Secret
+  #     name: "app-secrets"
+  #     optional: false
 
 # Logging configuration
 logging:
