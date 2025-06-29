@@ -4,7 +4,7 @@
 {{- range $config := .Values.simpleIngress }}
 {{- if $config.enabled }}
 ---
-{{- $ingressName := include "deploy.ingressName" (dict "fullname" $fullName "domain" $config.domain) }}
+{{- $ingressName := include "deploy.ingressName" (dict "releaseName" $.Release.Name "domain" $config.domain) }}
 {{- $tlsSecretName := $config.tlsSecretName | default (include "deploy.tlsSecretName" $config.domain) }}
 {{- if semverCompare ">=1.19-0" $.Capabilities.KubeVersion.GitVersion -}}
 apiVersion: networking.k8s.io/v1

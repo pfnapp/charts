@@ -71,10 +71,10 @@ Usage: {{ include "deploy.tlsSecretName" "example.com" }}
 
 {{/*
 Generate ingress name from domain (replace dots with dashes)
-Usage: {{ include "deploy.ingressName" (dict "fullname" .fullname "domain" "example.com") }}
+Usage: {{ include "deploy.ingressName" (dict "releaseName" .Release.Name "domain" "example.com") }}
 */}}
 {{- define "deploy.ingressName" -}}
-{{- printf "%s-%s" .fullname (.domain | replace "." "-") | trunc 63 | trimSuffix "-" }}
+{{- printf "%s-%s" .releaseName (.domain | replace "." "-") | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{/*

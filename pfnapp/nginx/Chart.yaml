@@ -2,7 +2,7 @@ apiVersion: v2
 name: nginx
 description: A simple Nginx deployment chart using the dynamic deploy chart
 type: application
-version: 0.1.4
+version: 0.1.5
 appVersion: "1.24"
 home: https://github.com/pfnapp/charts
 maintainers:
@@ -13,5 +13,5 @@ keywords:
   - server
 dependencies:
   - name: deploy
-    version: "0.1.4"
+    version: "0.1.5"
     repository: "file://../deploy"
