@@ -118,6 +118,22 @@ service:
   port: 80
   targetPort: 80
   annotations: {}
+  # Multiple ports configuration (optional)
+  # If specified, overrides the single port configuration above
+  ports: []
+    # Example:
+    # - port: 80
+    #   targetPort: 8080
+    #   protocol: TCP
+    #   name: http
+    # - port: 443
+    #   targetPort: 8443
+    #   protocol: TCP
+    #   name: https
+    # - port: 9090
+    #   targetPort: 9090
+    #   protocol: TCP
+    #   name: metrics
 
 # Single Ingress configuration (legacy support)
 ingress: {}

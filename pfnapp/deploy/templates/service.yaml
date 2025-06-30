@@ -12,10 +12,19 @@ metadata:
 spec:
   type: {{ .Values.service.type }}
   ports:
+  {{- if .Values.service.ports }}
+  {{- range .Values.service.ports }}
+    - port: {{ .port }}
+      targetPort: {{ .targetPort }}
+      protocol: {{ .protocol | default "TCP" }}
+      name: {{ .name }}
+  {{- end }}
+  {{- else }}
     - port: {{ .Values.service.port }}
       targetPort: {{ .Values.service.targetPort }}
       protocol: TCP
       name: http
+  {{- end }}
   selector:
     {{- include "deploy.selectorLabels" . | nindent 4 }}
 {{- end }}
@@ -36,10 +45,19 @@ spec:
   type: ClusterIP
   clusterIP: None
   ports:
+  {{- if .Values.service.ports }}
+  {{- range .Values.service.ports }}
+    - port: {{ .port }}
+      targetPort: {{ .targetPort }}
+      protocol: {{ .protocol | default "TCP" }}
+      name: {{ .name }}
+  {{- end }}
+  {{- else }}
     - port: {{ .Values.service.port }}
       targetPort: {{ .Values.service.targetPort }}
       protocol: TCP
       name: http
+  {{- end }}
   selector:
     {{- include "deploy.selectorLabels" . | nindent 4 }}
 {{- end }}
