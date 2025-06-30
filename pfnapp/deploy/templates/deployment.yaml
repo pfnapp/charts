@@ -70,7 +70,7 @@ spec:
           {{- if .Values.livenessProbe }}
           livenessProbe:
             {{- toYaml .Values.livenessProbe | nindent 12 }}
-          {{- else if .Values.simpleLivenessProbe.httpGet.path }}
+          {{- else if and .Values.simpleLivenessProbe .Values.simpleLivenessProbe.httpGet .Values.simpleLivenessProbe.httpGet.path }}
           livenessProbe:
             httpGet:
               path: {{ .Values.simpleLivenessProbe.httpGet.path }}
@@ -83,7 +83,7 @@ spec:
           {{- if .Values.readinessProbe }}
           readinessProbe:
             {{- toYaml .Values.readinessProbe | nindent 12 }}
-          {{- else if .Values.simpleReadinessProbe.httpGet.path }}
+          {{- else if and .Values.simpleReadinessProbe .Values.simpleReadinessProbe.httpGet .Values.simpleReadinessProbe.httpGet.path }}
           readinessProbe:
             httpGet:
               path: {{ .Values.simpleReadinessProbe.httpGet.path }}
@@ -96,7 +96,7 @@ spec:
           {{- if .Values.startupProbe }}
           startupProbe:
             {{- toYaml .Values.startupProbe | nindent 12 }}
-          {{- else if .Values.simpleStartupProbe.httpGet.path }}
+          {{- else if and .Values.simpleStartupProbe .Values.simpleStartupProbe.httpGet .Values.simpleStartupProbe.httpGet.path }}
           startupProbe:
             httpGet:
               path: {{ .Values.simpleStartupProbe.httpGet.path }}
