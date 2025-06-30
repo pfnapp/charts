@@ -3,6 +3,27 @@ entries:
   deploy:
   - apiVersion: v2
     appVersion: "1.0"
+    created: "2025-06-30T13:57:44.474903706Z"
+    description: A dynamic Helm chart for deploying applications with configurable
+      deployment types, environment variables, ingress, and logging
+    digest: 90e8588edfc492748b225552462f83678d7afabfa3e4630d79a6eb9e7d84339d
+    home: https://pfnapp.github.io/charts
+    keywords:
+    - deployment
+    - statefulset
+    - ingress
+    - haproxy
+    - configmap
+    - secret
+    maintainers:
+    - name: pfnapp-team
+    name: deploy
+    type: application
+    urls:
+    - https://github.com/pfnapp/charts/releases/download/deploy-0.1.9/deploy-0.1.9.tgz
+    version: 0.1.9
+  - apiVersion: v2
+    appVersion: "1.0"
     created: "2025-06-29T16:14:13.446178662Z"
     description: A dynamic Helm chart for deploying applications with configurable
       deployment types, environment variables, ingress, and logging
@@ -317,4 +338,4 @@ entries:
     urls:
     - https://github.com/pfnapp/charts/releases/download/nginx-0.1.1/nginx-0.1.1.tgz
     version: 0.1.1
-generated: "2025-06-29T16:14:13.579205954Z"
+generated: "2025-06-30T13:57:44.47496504Z"
