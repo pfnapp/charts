@@ -4,7 +4,7 @@ description: A dynamic Helm chart for deploying applications with configurable d
 type: application
 version: 0.1.9
 appVersion: "1.0"
-home: https://github.com/pfnapp/charts
+home: https://pfnapp.github.io/charts
 maintainers:
   - name: pfnapp-team
 keywords:

@@ -17,7 +17,7 @@ This chart provides a flexible way to deploy applications to Kubernetes with sup
 
 ```bash
 # Add the repository
-helm repo add pfnapp https://github.com/pfnapp/charts
+helm repo add pfnapp https://pfnapp.github.io/charts
 
 # Install the chart
 helm install my-app pfnapp/deploy -f values.yaml
