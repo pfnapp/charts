@@ -108,32 +108,8 @@ spec:
           {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
-          {{- if or .Values.configMap.enabled .Values.secret.enabled .Values.env .Values.envFrom }}
+          {{- if .Values.env }}
           env:
-            {{- if .Values.configMap.enabled }}
-            - name: CONFIG_MAP_NAME
-              valueFrom:
-                configMapKeyRef:
-                  name: {{ include "deploy.fullname" . }}-config
-                  key: config
-            {{- range $key, $value := .Values.configMap.data }}
-            - name: {{ $key }}
-              valueFrom:
-                configMapKeyRef:
-                  name: {{ include "deploy.fullname" $ }}-config
-                  key: {{ $key }}
-            {{- end }}
-            {{- end }}
-            {{- if .Values.secret.enabled }}
-            {{- range $key, $value := .Values.secret.data }}
-            - name: {{ $key }}
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "deploy.fullname" $ }}-secret
-                  key: {{ $key }}
-            {{- end }}
-            {{- end }}
-            {{- if .Values.env }}
             {{- range .Values.env }}
             - name: {{ .name }}
               {{- if .value }}
@@ -171,8 +147,16 @@ spec:
             {{- end }}
             {{- end }}
           {{- end }}
-          {{- if .Values.envFrom }}
+          {{- if or .Values.configMap.enabled .Values.secret.enabled .Values.envFrom }}
           envFrom:
+            {{- if .Values.configMap.enabled }}
+            - configMapRef:
+                name: {{ include "deploy.fullname" . }}-config
+            {{- end }}
+            {{- if .Values.secret.enabled }}
+            - secretRef:
+                name: {{ include "deploy.fullname" . }}-secret
+            {{- end }}
             {{- range .Values.envFrom }}
             {{- if .configMapRef }}
             - configMapRef:
