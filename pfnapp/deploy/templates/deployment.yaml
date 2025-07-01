@@ -214,6 +214,7 @@ spec:
             claimName: {{ include "deploy.fullname" $ }}-{{ $volume.name | default (printf "simple-volume-%d" $index) }}
         {{- end }}
       {{- end }}
+{{- end }}
 {{- if eq .Values.deploymentType "deployment" }}
 ---
 {{- range $index, $volume := .Values.simpleVolumes }}
@@ -233,6 +234,5 @@ spec:
     requests:
       storage: {{ $volume.size }}
 ---
-{{- end }}
 {{- end }}
 {{- end }}
