@@ -12,7 +12,6 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -51,6 +50,31 @@ jobs:
             if [ -f "$chart/Chart.yaml" ]; then
               echo "Templating $chart"
               helm template test "$chart"
+              # Test with StatefulSet configuration
+              helm template test "$chart" --set deploymentType=statefulset
+            fi
+          done
+
+      - name: Run Helm tests
+        run: |
+          for chart in pfnapp/*/; do
+            if [ -f "$chart/Chart.yaml" ]; then
+              echo "Running tests for $chart"
+              # Test deployment configuration
+              if helm install test-deployment "$chart" --dry-run --debug; then
+                echo "Deployment test passed for $chart"
+              else
+                echo "Deployment test failed for $chart"
+                exit 1
+              fi
+              
+              # Test StatefulSet configuration
+              if helm install test-statefulset "$chart" --set deploymentType=statefulset --dry-run --debug; then
+                echo "StatefulSet test passed for $chart"
+              else
+                echo "StatefulSet test failed for $chart"
+                exit 1
+              fi
             fi
           done
 

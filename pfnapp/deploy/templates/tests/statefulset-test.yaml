@@ -1,0 +1,38 @@
+{{- if eq .Values.deploymentType "statefulset" }}
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "{{ include "deploy.fullname" . }}-statefulset-test"
+  labels:
+    {{- include "deploy.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": test
+spec:
+  restartPolicy: Never
+  containers:
+    - name: statefulset-test
+      image: busybox:1.35
+      command: ['sh', '-c']
+      args:
+        - |
+          echo "Testing StatefulSet deployment..."
+          
+          # Test if StatefulSet exists
+          if ! nslookup {{ include "deploy.fullname" . }}{{- if .Values.logging.enabled }}-service{{- end }}-0.{{ .Values.statefulset.serviceName | default (include "deploy.fullname" .) }}; then
+            echo "ERROR: StatefulSet pod DNS resolution failed"
+            exit 1
+          fi
+          
+          echo "StatefulSet DNS resolution test passed"
+          
+          # Test service connectivity if service port is defined
+          {{- if .Values.service.port }}
+          if ! nc -z {{ include "deploy.fullname" . }} {{ .Values.service.port }}; then
+            echo "ERROR: Service connectivity test failed"
+            exit 1
+          fi
+          echo "Service connectivity test passed"
+          {{- end }}
+          
+          echo "All StatefulSet tests passed!"
+{{- end }}

@@ -18,8 +18,12 @@ spec:
       {{- with .Values.podAnnotations }}
       annotations:
         {{- toYaml . | nindent 8 }}
+        {{- if .Values.logging.enabled }}
+        enableLog: "true"
+        {{- end }}
       {{- end }}
-      {{- if .Values.logging.enabled }}
+      {{- if and (not .Values.podAnnotations) .Values.logging.enabled }}
+      annotations:
         enableLog: "true"
       {{- end }}
       labels:
@@ -142,7 +146,6 @@ spec:
                 {{- end }}
               {{- end }}
             {{- end }}
-            {{- end }}
           {{- end }}
           {{- if or .Values.configMap.enabled .Values.secret.enabled .Values.envFrom }}
           envFrom:
@@ -167,6 +170,7 @@ spec:
                 {{- if .secretRef.optional }}
                 optional: {{ .secretRef.optional }}
                 {{- end }}
+            {{- end }}
             {{- end }}
           {{- end }}
           {{- if or .Values.volumeMounts .Values.simpleMounts .Values.simpleVolumes }}
