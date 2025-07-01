@@ -177,7 +177,7 @@ spec:
                 {{- end }}
             {{- end }}
           {{- end }}
-          {{- if or .Values.volumeMounts .Values.simpleMounts .Values.simpleVolumes }}
+          {{- if or .Values.volumeMounts .Values.simpleMounts (and (eq .Values.deploymentType "deployment") .Values.simpleVolumes) }}
           volumeMounts:
             {{- with .Values.volumeMounts }}
             {{- toYaml . | nindent 12 }}
@@ -186,12 +186,14 @@ spec:
             - name: simple-mount-{{ $index }}
               mountPath: {{ $mount.mountPath }}
             {{- end }}
+            {{- if eq .Values.deploymentType "deployment" }}
             {{- range $index, $volume := .Values.simpleVolumes }}
             - name: {{ $volume.name | default (printf "simple-volume-%d" $index) }}
               mountPath: {{ $volume.mountPath }}
             {{- end }}
+            {{- end }}
           {{- end }}
-      {{- if or .Values.volumes .Values.simpleMounts .Values.simpleVolumes }}
+      {{- if and (eq .Values.deploymentType "deployment") (or .Values.volumes .Values.simpleMounts .Values.simpleVolumes) }}
       volumes:
         {{- with .Values.volumes }}
         {{- toYaml . | nindent 8 }}
@@ -212,6 +214,7 @@ spec:
             claimName: {{ include "deploy.fullname" $ }}-{{ $volume.name | default (printf "simple-volume-%d" $index) }}
         {{- end }}
       {{- end }}
+{{- if eq .Values.deploymentType "deployment" }}
 ---
 {{- range $index, $volume := .Values.simpleVolumes }}
 apiVersion: v1
@@ -230,5 +233,6 @@ spec:
     requests:
       storage: {{ $volume.size }}
 ---
+{{- end }}
 {{- end }}
 {{- end }}
