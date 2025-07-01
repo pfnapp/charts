@@ -1,0 +1,35 @@
+# Example values file showing custom command and args usage
+app:
+  name: "custom-app"
+  version: "1.0.0"
+
+image:
+  repository: "alpine"
+  tag: "3.18"
+  pullPolicy: IfNotPresent
+  # Override the default entrypoint
+  command:
+    - "/bin/sh"
+    - "-c"
+  # Custom arguments
+  args:
+    - "echo 'Starting custom application...'"
+    - "&&"
+    - "while true; do echo 'Application running...'; sleep 30; done"
+
+# Container port for health checks
+containerPorts:
+  - containerPort: 8080
+    name: http
+
+# Simple health check
+simpleLivenessProbe:
+  httpGet:
+    path: "/health"
+    port: "http"
+
+service:
+  enabled: true
+  type: ClusterIP
+  port: 8080
+  targetPort: 8080

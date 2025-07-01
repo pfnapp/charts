@@ -17,6 +17,19 @@ image:
   repository: "nginx"
   tag: "latest"
   pullPolicy: IfNotPresent
+  # Container command (overrides ENTRYPOINT)
+  command: []
+    # Example:
+    # - "/bin/sh"
+    # - "-c"
+  # Container arguments (overrides CMD)
+  args: []
+    # Example:
+    # - "echo"
+    # - "Hello World"
+    # - "&&"
+    # - "sleep"
+    # - "3600"
 
 # Image pull secrets
 imagePullSecrets: []
