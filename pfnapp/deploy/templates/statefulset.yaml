@@ -168,7 +168,6 @@ spec:
                 optional: {{ .secretRef.optional }}
                 {{- end }}
             {{- end }}
-            {{- end }}
           {{- end }}
           {{- if or .Values.volumeMounts .Values.simpleMounts .Values.simpleVolumes }}
           volumeMounts:
