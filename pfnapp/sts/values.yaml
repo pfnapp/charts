@@ -1,4 +1,4 @@
-# Default values for deploy chart
+# Default values for sts chart
 # This is a YAML-formatted file.
 
 # Application configuration
@@ -425,25 +425,25 @@ simpleVolumes: []
   #   accessModes: ["ReadWriteMany"]
   #   name: "cache-volume"
 
-# Ultra-simplified storage for Deployments - creates external PVCs
+# Ultra-simplified storage for StatefulSets - just specify what you need
 simpleStorage: []
-  # Examples - even simpler than simpleVolumes, optimized for Deployments:
-  # - path: "/uploads"                # Required: mount path
-  #   size: "50Gi"                    # Required: storage size
+  # Examples - even simpler than simpleVolumes, optimized for StatefulSets:
+  # - path: "/data"                   # Required: mount path
+  #   size: "100Gi"                   # Required: storage size
   #   class: "fast-ssd"               # Required: storage class
   #   # That's it! Automatically creates:
-  #   # - PVC with name "uploads"
-  #   # - volumeMount to /uploads
-  #   # - accessModes: ["ReadWriteMany"] (Deployment default for sharing)
+  #   # - volumeClaimTemplate with name "data"
+  #   # - volumeMount to /data
+  #   # - accessModes: ["ReadWriteOnce"] (StatefulSet default)
   #
-  # - path: "/cache"
-  #   size: "10Gi"
+  # - path: "/logs"
+  #   size: "20Gi"
   #   class: "standard"
-  #   # Creates PVC "cache" mounted at /cache
+  #   # Creates volumeClaimTemplate "logs" mounted at /logs
   #
   # Advanced options (optional):
-  # - path: "/shared-data"
-  #   size: "100Gi"
+  # - path: "/database"
+  #   size: "500Gi"
   #   class: "ultra-fast"
-  #   name: "application-data"        # Custom name instead of auto-generated
+  #   name: "postgres-data"           # Custom name instead of auto-generated
   #   accessModes: ["ReadWriteOnce"]  # Override default

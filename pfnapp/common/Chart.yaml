@@ -1,0 +1,13 @@
+apiVersion: v2
+name: common
+description: A library of common templates for PFNApp charts
+type: library
+version: 1.0.0
+appVersion: "1.0.0"
+home: https://pfnapp.github.io/charts
+maintainers:
+  - name: pfnapp-team
+keywords:
+  - library
+  - templates
+  - pfnapp

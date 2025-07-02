@@ -1,282 +1,128 @@
-# Deploy Helm Chart
+# Deploy Chart
 
-A dynamic Helm chart for deploying applications with configurable deployment types, environment variables, ingress configurations, and logging support.
+A Helm chart for deploying **stateless applications** as Kubernetes Deployments.
 
 ## Overview
 
-This chart provides a flexible way to deploy applications to Kubernetes with support for:
-- **Deployment Types**: Standard Deployment or StatefulSet
-- **Multiple Ingress Options**: Single, multiple, domain-based, and simplified configurations
-- **Environment Variables**: ConfigMaps, Secrets, and external references
-- **Health Checks**: Standard and simplified probe configurations
-- **Auto-scaling**: Horizontal Pod Autoscaler support
-- **Security**: Pod and container security contexts
-- **Storage**: Persistent volumes and simple mounts
+This chart is designed for stateless workloads that can run multiple replicas sharing storage and configuration. Perfect for web applications, APIs, microservices, and other horizontally scalable services.
 
-## Installation
+## Key Features
+
+- **Deployment Workloads**: Optimized for stateless applications
+- **Horizontal Pod Autoscaling**: Built-in HPA support
+- **Flexible Ingress**: 4 different ingress configuration patterns
+- **Multiple Storage Options**: Standard volumes, simple mounts, and simplified persistent volumes
+- **Environment Management**: ConfigMap, Secret, and external references
+- **Health Checks**: Standard and simplified probe configurations
+- **Security**: Pod and container security contexts
+
+## Quick Start
+
+### Basic Web Application
+
+```yaml
+# values.yaml
+app:
+  name: "my-web-app"
+
+image:
+  repository: "nginx"
+  tag: "1.21"
+
+service:
+  port: 80
+
+simpleIngress:
+  - enabled: true
+    domain: "myapp.example.com"
+    className: "nginx"
+    tls: true
+    certManager:
+      enabled: true
+      issuer: "letsencrypt"
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+```
+
+### Install
 
 ```bash
-# Add the repository
-helm repo add pfnapp https://pfnapp.github.io/charts
-
-# Install the chart
 helm install my-app pfnapp/deploy -f values.yaml
 ```
 
 ## Configuration
 
-The following table lists the configurable parameters and their default values.
+All configuration is done through the `values.yaml` file. Below are the complete configuration options:
 
-### Application Settings
+### Application Configuration
 
 | Parameter | Description | Default |
 |-----------|-------------|---------|
 | `app.name` | Application name | `"myapp"` |
 | `app.version` | Application version | `"latest"` |
-| `deploymentType` | Deployment type: "deployment" or "statefulset" | `"deployment"` |
-| `replicaCount` | Number of replicas | `1` |
+| `replicaCount` | Number of pod replicas | `1` |
 
-### Image Configuration
+### Image Settings
 
 | Parameter | Description | Default |
 |-----------|-------------|---------|
 | `image.repository` | Container image repository | `"nginx"` |
-| `image.tag` | Container image tag | `"latest"` |
+| `image.tag` | Image tag | `"latest"` |
 | `image.pullPolicy` | Image pull policy | `IfNotPresent` |
+| `image.command` | Container command override (array) | `[]` |
+| `image.args` | Container arguments override (array) | `[]` |
 | `imagePullSecrets` | Image pull secrets | `[]` |
-
-### Service Account
-
-| Parameter | Description | Default |
-|-----------|-------------|---------|
-| `serviceAccount.create` | Create service account | `true` |
-| `serviceAccount.annotations` | Service account annotations | `{}` |
-| `serviceAccount.name` | Service account name (auto-generated if empty) | `""` |
-
-### Security Contexts
-
-| Parameter | Description | Default |
-|-----------|-------------|---------|
-| `podSecurityContext` | Pod security context | `{}` |
-| `securityContext` | Container security context | `{}` |
-| `podAnnotations` | Pod annotations | `{}` |
-
-**Example:**
-```yaml
-podSecurityContext:
-  runAsNonRoot: true
-  runAsUser: 1001
-  fsGroup: 2000
-
-securityContext:
-  allowPrivilegeEscalation: false
-  readOnlyRootFilesystem: true
-  runAsNonRoot: true
-  runAsUser: 1001
-  capabilities:
-    drop:
-    - ALL
-```
-
-### Resources and Scheduling
-
-| Parameter | Description | Default |
-|-----------|-------------|---------|
-| `resources` | Resource limits and requests | `{}` |
-| `nodeSelector` | Node selector | `{}` |
-| `tolerations` | Tolerations for taints | `[]` |
-| `affinity` | Affinity rules | `{}` |
-
-**Example:**
-```yaml
-resources:
-  limits:
-    cpu: 500m
-    memory: 512Mi
-  requests:
-    cpu: 250m
-    memory: 256Mi
-
-nodeSelector:
-  disktype: ssd
-  kubernetes.io/arch: amd64
-```
-
-### Auto-scaling
-
-| Parameter | Description | Default |
-|-----------|-------------|---------|
-| `autoscaling.enabled` | Enable HPA | `false` |
-| `autoscaling.minReplicas` | Minimum replicas | `1` |
-| `autoscaling.maxReplicas` | Maximum replicas | `100` |
-| `autoscaling.targetCPUUtilizationPercentage` | Target CPU utilization | `80` |
 
 ### Service Configuration
 
 | Parameter | Description | Default |
 |-----------|-------------|---------|
-| `service.enabled` | Enable service | `true` |
+| `service.enabled` | Enable service creation | `true` |
 | `service.type` | Service type | `ClusterIP` |
 | `service.port` | Service port | `80` |
-| `service.targetPort` | Target port | `80` |
+| `service.targetPort` | Target port on pods | `80` |
 | `service.annotations` | Service annotations | `{}` |
+| `service.ports` | Multiple ports configuration | `[]` |
 
-### Container Ports
+### Ingress Configuration
 
-| Parameter | Description | Default |
-|-----------|-------------|---------|
-| `containerPorts` | Container ports configuration | `[{containerPort: 80, name: "http"}]` |
+The chart supports **4 different ingress patterns**:
 
-## Health Checks
-
-### Standard Probes
-
-Configure detailed health checks:
-
-```yaml
-livenessProbe:
-  httpGet:
-    path: /health
-    port: http
-  initialDelaySeconds: 30
-  periodSeconds: 10
-  timeoutSeconds: 5
-  failureThreshold: 3
-
-readinessProbe:
-  httpGet:
-    path: /ready
-    port: http
-  initialDelaySeconds: 5
-  periodSeconds: 5
-
-startupProbe:
-  httpGet:
-    path: /health
-    port: http
-  initialDelaySeconds: 10
-  periodSeconds: 5
-  failureThreshold: 30
-```
-
-### Simplified Probes
-
-For quick setup, just provide the path:
-
-```yaml
-# Minimal configuration - uses defaults
-simpleLivenessProbe:
-  httpGet:
-    path: "/health"
-
-simpleReadinessProbe:
-  httpGet:
-    path: "/ready"
-
-simpleStartupProbe:
-  httpGet:
-    path: "/health"
-```
-
-**Simplified Probe Defaults:**
-- **Liveness**: initialDelaySeconds=30, periodSeconds=10, timeoutSeconds=5, failureThreshold=3
-- **Readiness**: initialDelaySeconds=5, periodSeconds=5, timeoutSeconds=3, failureThreshold=3
-- **Startup**: initialDelaySeconds=10, periodSeconds=5, timeoutSeconds=3, failureThreshold=30
-- **Port**: defaults to "http" if not specified
-
-## Environment Variables
-
-### Helm-Managed ConfigMap/Secret
-
-```yaml
-configMap:
-  enabled: true
-  data:
-    DATABASE_HOST: "postgres.example.com"
-    DATABASE_PORT: "5432"
-    LOG_LEVEL: "info"
-
-secret:
-  enabled: true
-  data:
-    DATABASE_PASSWORD: "c2VjcmV0cGFzcw=="  # base64 encoded
-    API_TOKEN: "dG9rZW4xMjM="              # base64 encoded
-```
-
-### External References
-
-```yaml
-env:
-  # Direct value
-  - name: "ENVIRONMENT"
-    value: "production"
-  
-  # From external ConfigMap
-  - name: "DATABASE_URL"
-    valueFrom:
-      configMapKeyRef:
-        name: "database-config"
-        key: "url"
-        optional: false
-  
-  # From external Secret
-  - name: "API_KEY"
-    valueFrom:
-      secretKeyRef:
-        name: "api-secrets"
-        key: "key"
-        optional: false
-
-# Load all keys from external ConfigMap/Secret
-envFrom:
-  - configMapRef:
-      name: "app-config"
-      optional: false
-  - secretRef:
-      name: "app-secrets"
-      optional: false
-```
-
-## Ingress Configuration
-
-### 1. Single Ingress (Legacy)
+#### 1. Legacy Single Ingress
 
 ```yaml
 ingress:
   enabled: true
-  className: "haproxy"
+  className: "nginx"
   annotations:
-    haproxy.org/load-balance: "roundrobin"
+    nginx.ingress.kubernetes.io/rewrite-target: /
   hosts:
-    - host: chart-example.local
+    - host: myapp.example.com
       paths:
         - path: /
           pathType: Prefix
   tls:
-    - secretName: example-tls
+    - secretName: myapp-tls
       hosts:
-        - chart-example.local
+        - myapp.example.com
 ```
 
-### 2. Multiple Ingresses (Advanced)
+#### 2. Multiple Named Ingresses
 
 ```yaml
 ingresses:
   public:
     enabled: true
-    className: "haproxy"
-    annotations:
-      haproxy.org/load-balance: "roundrobin"
+    className: "nginx"
     hosts:
       - host: myapp.example.com
         paths:
           - path: /
             pathType: Prefix
-    tls:
-      - secretName: myapp-tls
-        hosts:
-          - myapp.example.com
-  
   admin:
     enabled: true
     className: "nginx"
@@ -289,7 +135,7 @@ ingresses:
             pathType: Prefix
 ```
 
-### 3. Domain-Based Ingresses
+#### 3. Domain-Based Ingresses (Auto-Generated Names)
 
 ```yaml
 ingressDomains:
@@ -297,211 +143,300 @@ ingressDomains:
     host: "myapp.example.com"
     className: "haproxy"
     tls: true
-    tlsSecret: "myapp-example-com-tls"
-    annotations:
-      haproxy.org/load-balance: "roundrobin"
+    tlsSecret: "myapp-example-com-tls"  # Optional
     paths:
       - path: /
         pathType: Prefix
 ```
 
-### 4. Simplified Ingress (Recommended)
-
-Automated setup with Let's Encrypt and External DNS:
+#### 4. Simplified Ingress (Recommended)
 
 ```yaml
 simpleIngress:
   - enabled: true
-    domain: "myapp.example.com"
+    domain: "myapp.example.com"  # Auto-generates host and TLS secret
     className: "haproxy"
     tls: true
     certManager:
       enabled: true
-      issuer: "letsencrypt-prod"
+      issuer: "letsencrypt"
     externalDns:
       enabled: true
-      target: "cname.example.com"
+      target: "ingress.example.com"
       cloudflareProxied: false
 ```
 
-## Storage and Volumes
+### Environment Variables
 
-### Standard Volumes
-
-```yaml
-volumes:
-  - name: config-volume
-    configMap:
-      name: my-config
-  - name: data-volume
-    persistentVolumeClaim:
-      claimName: data-pvc
-
-volumeMounts:
-  - name: config-volume
-    mountPath: /etc/config
-    readOnly: true
-  - name: data-volume
-    mountPath: /data
-```
-
-### Simple Mounts
-
-Quick ConfigMap/Secret mounting:
+#### Helm-Managed ConfigMap
 
 ```yaml
-simpleMounts:
-  - mountPath: "/etc/config"
-    configMap: "my-app-config"
-  - mountPath: "/etc/secrets"
-    secret: "my-app-secrets"
+configMap:
+  enabled: true
+  data:
+    DATABASE_URL: "postgres://localhost:5432/myapp"
+    REDIS_URL: "redis://localhost:6379"
 ```
 
-### Simple Volumes
+#### Helm-Managed Secret
 
-Quick persistent volume setup - just specify path, size, and storage class:
+```yaml
+secret:
+  enabled: true
+  data:
+    API_KEY: "bXlfc2VjcmV0X2FwaV9rZXk="  # base64 encoded
+    DB_PASSWORD: "c2VjcmV0cGFzcw=="
+```
+
+#### External References
+
+```yaml
+env:
+  # Direct values
+  - name: NODE_ENV
+    value: "production"
+  
+  # From external ConfigMap
+  - name: CONFIG_VALUE
+    valueFrom:
+      configMapKeyRef:
+        name: external-config
+        key: config-key
+        optional: false
+  
+  # From external Secret
+  - name: SECRET_VALUE
+    valueFrom:
+      secretKeyRef:
+        name: external-secret
+        key: secret-key
+        optional: true
+
+# Load all keys from external sources
+envFrom:
+  - configMapRef:
+      name: common-config
+      optional: false
+  - secretRef:
+      name: app-secrets
+      optional: true
+```
+
+### Storage & Volumes
+
+#### Simplified Persistent Volumes (Recommended)
 
 ```yaml
 simpleVolumes:
-  # Minimal configuration with defaults
-  - mountPath: "/data"
-    size: "10Gi"
+  - mountPath: "/app/uploads"
+    size: "50Gi"
     storageClass: "fast-ssd"
+    accessModes: ["ReadWriteMany"]  # Shared across pods
+    name: "uploads-storage"
   
-  # With custom access modes
-  - mountPath: "/cache"
-    size: "5Gi"
+  - mountPath: "/app/cache"
+    size: "10Gi"
     storageClass: "standard"
-    accessModes: ["ReadWriteMany"]
-    name: "shared-cache"
 ```
 
-**Simple Volume Features:**
-- **Automatic PVC Creation**: For deployments, creates PersistentVolumeClaims automatically
-- **StatefulSet Integration**: For StatefulSets, adds to volumeClaimTemplates
-- **Default Access Mode**: Uses `ReadWriteOnce` if not specified
-- **Auto-naming**: Generates volume names if not provided
-- **Flexible**: Works with both deployment and StatefulSet types
-
-### StatefulSet Configuration
+#### Simple File Mounts
 
 ```yaml
-deploymentType: "statefulset"
-statefulset:
-  serviceName: ""  # Auto-generated if empty
-  volumeClaimTemplates:
-    - metadata:
-        name: data
-      spec:
-        accessModes: ["ReadWriteOnce"]
-        storageClassName: "fast-ssd"
-        resources:
-          requests:
-            storage: 10Gi
+simpleMounts:
+  - mountPath: "/etc/app-config"
+    configMap: "app-config"
+  - mountPath: "/etc/secrets"
+    secret: "app-secrets"
 ```
 
-## Logging Configuration
+#### Standard Kubernetes Volumes
+
+```yaml
+volumeMounts:
+  - name: data-volume
+    mountPath: /app/data
+  - name: config-volume
+    mountPath: /etc/config
+    readOnly: true
+
+volumes:
+  - name: data-volume
+    persistentVolumeClaim:
+      claimName: existing-pvc
+  - name: config-volume
+    configMap:
+      name: app-config
+```
+
+### Resource Management
+
+```yaml
+resources:
+  limits:
+    cpu: "1000m"
+    memory: "1Gi"
+  requests:
+    cpu: "100m"
+    memory: "128Mi"
+```
+
+### Health Checks
+
+#### Simplified Probes (Recommended)
+
+```yaml
+simpleLivenessProbe:
+  httpGet:
+    path: /health
+    port: 8080
+  initialDelaySeconds: 30
+  periodSeconds: 10
+
+simpleReadinessProbe:
+  httpGet:
+    path: /ready
+    port: 8080
+  initialDelaySeconds: 5
+  periodSeconds: 5
+
+simpleStartupProbe:
+  httpGet:
+    path: /startup
+    port: 8080
+  initialDelaySeconds: 10
+  periodSeconds: 5
+  failureThreshold: 30
+```
+
+#### Standard Probes
+
+```yaml
+livenessProbe:
+  httpGet:
+    path: /health
+    port: http
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+```
+
+### Auto-scaling
+
+```yaml
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+  # targetMemoryUtilizationPercentage: 80
+```
+
+### Security Settings
+
+#### Pod Security Context
+
+```yaml
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  fsGroup: 1000
+```
+
+#### Container Security Context
+
+```yaml
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  runAsUser: 1000
+  capabilities:
+    drop:
+      - ALL
+```
+
+#### Service Account
+
+```yaml
+serviceAccount:
+  create: true
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::123456789:role/my-role
+  name: "custom-service-account"
+```
+
+### Networking
+
+```yaml
+containerPorts:
+  - containerPort: 8080
+    name: http
+  - containerPort: 9090
+    name: metrics
+```
+
+### Scheduling & Placement
+
+```yaml
+nodeSelector:
+  kubernetes.io/arch: amd64
+
+tolerations:
+  - key: "node-type"
+    operator: "Equal"
+    value: "spot"
+    effect: "NoSchedule"
+
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                  - myapp
+          topologyKey: kubernetes.io/hostname
+```
+
+### Logging Configuration
 
 ```yaml
 logging:
-  enabled: true
-  # When enabled, appends "-service" to deployment name and adds log taints
+  enabled: true  # Adds "-service" suffix and logging tolerations
+```
+
+### Pod Annotations
+
+```yaml
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "8080"
+  prometheus.io/path: "/metrics"
 ```
 
 ## Examples
 
-### Basic Web Application
+See [VOLUMES.md](../../VOLUMES.md) for detailed volume configuration examples.
 
-```yaml
-app:
-  name: "my-web-app"
-  version: "1.0.0"
-
-image:
-  repository: "nginx"
-  tag: "1.21"
-
-service:
-  port: 80
-  targetPort: 80
-
-simpleLivenessProbe:
-  httpGet:
-    path: "/"
-
-simpleReadinessProbe:
-  httpGet:
-    path: "/"
-
-simpleIngress:
-  - enabled: true
-    domain: "myapp.example.com"
-    className: "nginx"
-    tls: true
-    certManager:
-      enabled: true
-      issuer: "letsencrypt-prod"
-```
-
-### Database Application with StatefulSet
-
-```yaml
-app:
-  name: "postgres-db"
-
-deploymentType: "statefulset"
-
-image:
-  repository: "postgres"
-  tag: "13"
-
-service:
-  port: 5432
-  targetPort: 5432
-
-secret:
-  enabled: true
-  data:
-    POSTGRES_PASSWORD: "cG9zdGdyZXNwYXNz"  # "postgrespass" base64
-
-# Using simplified volumes instead of manual volumeClaimTemplates
-simpleVolumes:
-  - mountPath: "/var/lib/postgresql/data"
-    size: "20Gi"
-    storageClass: "fast-ssd"
-    name: "postgres-data"
-
-resources:
-  requests:
-    memory: "256Mi"
-    cpu: "250m"
-  limits:
-    memory: "512Mi"
-    cpu: "500m"
-```
-
-### Microservice with External Dependencies
+### Basic API Service
 
 ```yaml
 app:
   name: "api-service"
 
 image:
-  repository: "myregistry/api-service"
+  repository: "mycompany/api"
   tag: "v1.2.3"
 
-env:
-  - name: "SERVICE_PORT"
-    value: "8080"
-  - name: "DATABASE_URL"
-    valueFrom:
-      secretKeyRef:
-        name: "database-secrets"
-        key: "url"
+replicaCount: 3
 
-envFrom:
-  - configMapRef:
-      name: "shared-config"
+service:
+  port: 8080
+  targetPort: 8080
 
 containerPorts:
   - containerPort: 8080
@@ -509,63 +444,56 @@ containerPorts:
 
 simpleLivenessProbe:
   httpGet:
-    path: "/health"
-    port: "http"
+    path: /health
+    port: 8080
 
 simpleReadinessProbe:
   httpGet:
-    path: "/ready"
-    port: "http"
-
-resources:
-  requests:
-    memory: "128Mi"
-    cpu: "100m"
-  limits:
-    memory: "256Mi"
-    cpu: "200m"
+    path: /ready
+    port: 8080
 
 autoscaling:
   enabled: true
-  minReplicas: 2
-  maxReplicas: 10
-  targetCPUUtilizationPercentage: 70
+  minReplicas: 3
+  maxReplicas: 20
+
+resources:
+  requests:
+    memory: "256Mi"
+    cpu: "100m"
+  limits:
+    memory: "512Mi"
+    cpu: "500m"
+
+env:
+  - name: PORT
+    value: "8080"
+  - name: NODE_ENV
+    value: "production"
 ```
 
-## Best Practices
+## Migration from Combined Chart
 
-1. **Use Simplified Configurations**: Start with `simpleIngress` and `simpleLivenessProbe` for quick setup
-2. **Resource Limits**: Always set resource requests and limits
-3. **Health Checks**: Configure appropriate health checks for your application
-4. **Security**: Use non-root containers and read-only root filesystems when possible
-5. **Secrets**: Never commit secrets to Git - use external secret management
-6. **Labels**: Leverage Helm's automatic labeling for resource management
+If migrating from the previous combined chart:
 
-## Troubleshooting
+1. Remove `deploymentType: "deployment"` from your values
+2. Use `pfnapp/deploy` instead of `pfnapp/deploy-old`
+3. Follow the [Migration Guide](../../MIGRATION.md)
 
-### Common Issues
+## Dependencies
 
-1. **Probe Failures**: Check if your application responds on the configured health check paths
-2. **Image Pull Errors**: Verify `imagePullSecrets` are configured for private registries
-3. **Ingress Not Working**: Ensure the ingress controller is installed and className is correct
-4. **Resource Constraints**: Check if resource limits are preventing pod startup
+- [Common Chart](../common/) v1.0.0 - Shared templates and helpers
 
-### Debugging Commands
+## Chart Information
 
-```bash
-# Check pod status
-kubectl get pods -l app.kubernetes.io/instance=my-app
+- **Type**: Application
+- **Version**: 2.0.0
+- **App Version**: latest
+- **Maintainer**: pfnapp-team
+- **Home**: https://pfnapp.github.io/charts
 
-# View pod logs
-kubectl logs -l app.kubernetes.io/instance=my-app
+## Related Documentation
 
-# Describe pod for events
-kubectl describe pod <pod-name>
-
-# Check ingress status
-kubectl get ingress -l app.kubernetes.io/instance=my-app
-```
-
-## Contributing
-
-This chart is maintained by the pfnapp team. For issues and contributions, please visit the [GitHub repository](https://github.com/pfnapp/charts).
+- [STS Chart](../sts/) - For StatefulSet workloads
+- [Volume Examples](../../VOLUMES.md) - Storage configuration examples
+- [Migration Guide](../../MIGRATION.md) - Upgrade from combined chart

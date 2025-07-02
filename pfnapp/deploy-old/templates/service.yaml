@@ -1,0 +1,63 @@
+{{- if .Values.service.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "deploy.fullname" . }}
+  labels:
+    {{- include "deploy.labels" . | nindent 4 }}
+  {{- with .Values.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+  {{- if .Values.service.ports }}
+  {{- range .Values.service.ports }}
+    - port: {{ .port }}
+      targetPort: {{ .targetPort }}
+      protocol: {{ .protocol | default "TCP" }}
+      name: {{ .name }}
+  {{- end }}
+  {{- else }}
+    - port: {{ .Values.service.port }}
+      targetPort: {{ .Values.service.targetPort }}
+      protocol: TCP
+      name: http
+  {{- end }}
+  selector:
+    {{- include "deploy.selectorLabels" . | nindent 4 }}
+{{- end }}
+
+{{- if and (eq .Values.deploymentType "statefulset") .Values.service.enabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.statefulset.serviceName | default (printf "%s-headless" (include "deploy.fullname" .)) }}
+  labels:
+    {{- include "deploy.labels" . | nindent 4 }}
+  {{- with .Values.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: ClusterIP
+  clusterIP: None
+  ports:
+  {{- if .Values.service.ports }}
+  {{- range .Values.service.ports }}
+    - port: {{ .port }}
+      targetPort: {{ .targetPort }}
+      protocol: {{ .protocol | default "TCP" }}
+      name: {{ .name }}
+  {{- end }}
+  {{- else }}
+    - port: {{ .Values.service.port }}
+      targetPort: {{ .Values.service.targetPort }}
+      protocol: TCP
+      name: http
+  {{- end }}
+  selector:
+    {{- include "deploy.selectorLabels" . | nindent 4 }}
+{{- end }}

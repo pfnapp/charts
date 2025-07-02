@@ -6,6 +6,9 @@ app:
   name: "myapp"
   version: "latest"
 
+# Deployment type: "deployment" or "statefulset"
+deploymentType: "deployment"
+
 # Replica count
 replicaCount: 1
 
@@ -424,26 +427,3 @@ simpleVolumes: []
   #   storageClass: "standard"
   #   accessModes: ["ReadWriteMany"]
   #   name: "cache-volume"
-
-# Ultra-simplified storage for Deployments - creates external PVCs
-simpleStorage: []
-  # Examples - even simpler than simpleVolumes, optimized for Deployments:
-  # - path: "/uploads"                # Required: mount path
-  #   size: "50Gi"                    # Required: storage size
-  #   class: "fast-ssd"               # Required: storage class
-  #   # That's it! Automatically creates:
-  #   # - PVC with name "uploads"
-  #   # - volumeMount to /uploads
-  #   # - accessModes: ["ReadWriteMany"] (Deployment default for sharing)
-  #
-  # - path: "/cache"
-  #   size: "10Gi"
-  #   class: "standard"
-  #   # Creates PVC "cache" mounted at /cache
-  #
-  # Advanced options (optional):
-  # - path: "/shared-data"
-  #   size: "100Gi"
-  #   class: "ultra-fast"
-  #   name: "application-data"        # Custom name instead of auto-generated
-  #   accessModes: ["ReadWriteOnce"]  # Override default

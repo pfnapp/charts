@@ -1,17 +1,17 @@
-{{- if eq .Values.deploymentType "deployment" }}
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
-  name: {{ include "deploy.fullname" . }}{{- if .Values.logging.enabled }}-service{{- end }}
+  name: {{ include "common.fullname" . }}{{- if .Values.logging.enabled }}-service{{- end }}
   labels:
-    {{- include "deploy.labels" . | nindent 4 }}
+    {{- include "common.labels" . | nindent 4 }}
 spec:
   {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.replicaCount }}
   {{- end }}
+  serviceName: {{ .Values.statefulset.serviceName | default (include "common.fullname" .) }}
   selector:
     matchLabels:
-      {{- include "deploy.selectorLabels" . | nindent 6 }}
+      {{- include "common.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       {{- with .Values.podAnnotations }}
@@ -19,13 +19,13 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       labels:
-        {{- include "deploy.selectorLabels" . | nindent 8 }}
+        {{- include "common.selectorLabels" . | nindent 8 }}
     spec:
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      serviceAccountName: {{ include "deploy.serviceAccountName" . }}
+      serviceAccountName: {{ include "common.serviceAccountName" . }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
       {{- with .Values.nodeSelector }}
@@ -150,17 +150,16 @@ spec:
                 {{- end }}
               {{- end }}
             {{- end }}
-            {{- end }}
           {{- end }}
           {{- if or .Values.configMap.enabled .Values.secret.enabled .Values.envFrom }}
           envFrom:
             {{- if .Values.configMap.enabled }}
             - configMapRef:
-                name: {{ include "deploy.fullname" . }}-config
+                name: {{ include "common.fullname" . }}-config
             {{- end }}
             {{- if .Values.secret.enabled }}
             - secretRef:
-                name: {{ include "deploy.fullname" . }}-secret
+                name: {{ include "common.fullname" . }}-secret
             {{- end }}
             {{- range .Values.envFrom }}
             {{- if .configMapRef }}
@@ -175,6 +174,7 @@ spec:
                 {{- if .secretRef.optional }}
                 optional: {{ .secretRef.optional }}
                 {{- end }}
+            {{- end }}
             {{- end }}
           {{- end }}
           {{- if or .Values.volumeMounts .Values.simpleMounts .Values.simpleVolumes .Values.simpleStorage }}
@@ -196,7 +196,7 @@ spec:
               mountPath: {{ $storage.path }}
             {{- end }}
           {{- end }}
-      {{- if or .Values.volumes .Values.simpleMounts .Values.simpleVolumes .Values.simpleStorage }}
+      {{- if or .Values.volumes .Values.simpleMounts }}
       volumes:
         {{- with .Values.volumes }}
         {{- toYaml . | nindent 8 }}
@@ -211,56 +211,37 @@ spec:
             secretName: {{ $mount.secret }}
           {{- end }}
         {{- end }}
-        {{- range $index, $volume := .Values.simpleVolumes }}
-        - name: {{ $volume.name | default (printf "simple-volume-%d" $index) }}
-          persistentVolumeClaim:
-            claimName: {{ include "common.fullname" $ }}-{{ $volume.name | default (printf "simple-volume-%d" $index) }}
-        {{- end }}
-        {{- range $storage := .Values.simpleStorage }}
-        {{- $cleanPath := $storage.path | trimPrefix "/" | replace "/" "-" }}
-        - name: {{ $storage.name | default ($cleanPath | default "root") }}
-          persistentVolumeClaim:
-            claimName: {{ include "common.fullname" $ }}-{{ $storage.name | default ($cleanPath | default "root") }}
-        {{- end }}
       {{- end }}
-{{- end }}
-{{- if or .Values.simpleVolumes .Values.simpleStorage }}
----
-{{- range $index, $volume := .Values.simpleVolumes }}
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: {{ include "common.fullname" $ }}-{{ $volume.name | default (printf "simple-volume-%d" $index) }}
-  labels:
-    {{- include "common.labels" $ | nindent 4 }}
-spec:
-  accessModes:
-    {{- range $volume.accessModes | default (list "ReadWriteOnce") }}
-    - {{ . }}
+  {{- if or .Values.statefulset.volumeClaimTemplates .Values.simpleVolumes .Values.simpleStorage }}
+  volumeClaimTemplates:
+    {{- with .Values.statefulset.volumeClaimTemplates }}
+    {{- toYaml . | nindent 4 }}
     {{- end }}
-  storageClassName: {{ $volume.storageClass }}
-  resources:
-    requests:
-      storage: {{ $volume.size }}
----
-{{- end }}
-{{- range $storage := .Values.simpleStorage }}
-{{- $cleanPath := $storage.path | trimPrefix "/" | replace "/" "-" }}
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: {{ include "common.fullname" $ }}-{{ $storage.name | default ($cleanPath | default "root") }}
-  labels:
-    {{- include "common.labels" $ | nindent 4 }}
-spec:
-  accessModes:
-    {{- range $storage.accessModes | default (list "ReadWriteMany") }}
-    - {{ . }}
+    {{- range $index, $volume := .Values.simpleVolumes }}
+    - metadata:
+        name: {{ $volume.name | default (printf "simple-volume-%d" $index) }}
+      spec:
+        accessModes:
+          {{- range $volume.accessModes | default (list "ReadWriteOnce") }}
+          - {{ . }}
+          {{- end }}
+        storageClassName: {{ $volume.storageClass }}
+        resources:
+          requests:
+            storage: {{ $volume.size }}
     {{- end }}
-  storageClassName: {{ $storage.class }}
-  resources:
-    requests:
-      storage: {{ $storage.size }}
----
-{{- end }}
-{{- end }}
+    {{- range $storage := .Values.simpleStorage }}
+    {{- $cleanPath := $storage.path | trimPrefix "/" | replace "/" "-" }}
+    - metadata:
+        name: {{ $storage.name | default ($cleanPath | default "root") }}
+      spec:
+        accessModes:
+          {{- range $storage.accessModes | default (list "ReadWriteOnce") }}
+          - {{ . }}
+          {{- end }}
+        storageClassName: {{ $storage.class }}
+        resources:
+          requests:
+            storage: {{ $storage.size }}
+    {{- end }}
+  {{- end }}

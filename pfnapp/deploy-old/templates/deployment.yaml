@@ -177,7 +177,7 @@ spec:
                 {{- end }}
             {{- end }}
           {{- end }}
-          {{- if or .Values.volumeMounts .Values.simpleMounts .Values.simpleVolumes .Values.simpleStorage }}
+          {{- if or .Values.volumeMounts .Values.simpleMounts (and (eq .Values.deploymentType "deployment") .Values.simpleVolumes) }}
           volumeMounts:
             {{- with .Values.volumeMounts }}
             {{- toYaml . | nindent 12 }}
@@ -186,17 +186,14 @@ spec:
             - name: simple-mount-{{ $index }}
               mountPath: {{ $mount.mountPath }}
             {{- end }}
+            {{- if eq .Values.deploymentType "deployment" }}
             {{- range $index, $volume := .Values.simpleVolumes }}
             - name: {{ $volume.name | default (printf "simple-volume-%d" $index) }}
               mountPath: {{ $volume.mountPath }}
             {{- end }}
-            {{- range $storage := .Values.simpleStorage }}
-            {{- $cleanPath := $storage.path | trimPrefix "/" | replace "/" "-" }}
-            - name: {{ $storage.name | default ($cleanPath | default "root") }}
-              mountPath: {{ $storage.path }}
             {{- end }}
           {{- end }}
-      {{- if or .Values.volumes .Values.simpleMounts .Values.simpleVolumes .Values.simpleStorage }}
+      {{- if and (eq .Values.deploymentType "deployment") (or .Values.volumes .Values.simpleMounts .Values.simpleVolumes) }}
       volumes:
         {{- with .Values.volumes }}
         {{- toYaml . | nindent 8 }}
@@ -214,25 +211,19 @@ spec:
         {{- range $index, $volume := .Values.simpleVolumes }}
         - name: {{ $volume.name | default (printf "simple-volume-%d" $index) }}
           persistentVolumeClaim:
-            claimName: {{ include "common.fullname" $ }}-{{ $volume.name | default (printf "simple-volume-%d" $index) }}
-        {{- end }}
-        {{- range $storage := .Values.simpleStorage }}
-        {{- $cleanPath := $storage.path | trimPrefix "/" | replace "/" "-" }}
-        - name: {{ $storage.name | default ($cleanPath | default "root") }}
-          persistentVolumeClaim:
-            claimName: {{ include "common.fullname" $ }}-{{ $storage.name | default ($cleanPath | default "root") }}
+            claimName: {{ include "deploy.fullname" $ }}-{{ $volume.name | default (printf "simple-volume-%d" $index) }}
         {{- end }}
       {{- end }}
 {{- end }}
-{{- if or .Values.simpleVolumes .Values.simpleStorage }}
+{{- if eq .Values.deploymentType "deployment" }}
 ---
 {{- range $index, $volume := .Values.simpleVolumes }}
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: {{ include "common.fullname" $ }}-{{ $volume.name | default (printf "simple-volume-%d" $index) }}
+  name: {{ include "deploy.fullname" $ }}-{{ $volume.name | default (printf "simple-volume-%d" $index) }}
   labels:
-    {{- include "common.labels" $ | nindent 4 }}
+    {{- include "deploy.labels" $ | nindent 4 }}
 spec:
   accessModes:
     {{- range $volume.accessModes | default (list "ReadWriteOnce") }}
@@ -242,25 +233,6 @@ spec:
   resources:
     requests:
       storage: {{ $volume.size }}
----
-{{- end }}
-{{- range $storage := .Values.simpleStorage }}
-{{- $cleanPath := $storage.path | trimPrefix "/" | replace "/" "-" }}
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: {{ include "common.fullname" $ }}-{{ $storage.name | default ($cleanPath | default "root") }}
-  labels:
-    {{- include "common.labels" $ | nindent 4 }}
-spec:
-  accessModes:
-    {{- range $storage.accessModes | default (list "ReadWriteMany") }}
-    - {{ . }}
-    {{- end }}
-  storageClassName: {{ $storage.class }}
-  resources:
-    requests:
-      storage: {{ $storage.size }}
 ---
 {{- end }}
 {{- end }}
