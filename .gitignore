@@ -159,3 +159,5 @@ chart-testing/
 
 # Helm plugins
 .helm/
+
+tasks.md

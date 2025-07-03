@@ -94,3 +94,7 @@ deploy:
   # Logging configuration
   logging:
     enabled: true
+
+  # Stakater Reloader - automatically restart when configs change
+  reloader:
+    enabled: true
