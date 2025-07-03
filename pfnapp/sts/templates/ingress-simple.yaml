@@ -1,0 +1,71 @@
+{{- if .Values.simpleIngress }}
+{{- $fullName := include "sts.fullname" . -}}
+{{- $svcPort := .Values.service.port -}}
+{{- range $config := .Values.simpleIngress }}
+{{- if $config.enabled }}
+{{- $ingressName := include "sts.ingressName" (dict "releaseName" $.Release.Name "domain" $config.domain) }}
+---
+{{- $tlsSecretName := $config.tlsSecretName | default (include "sts.tlsSecretName" $config.domain) }}
+{{- if semverCompare ">=1.19-0" $.Capabilities.KubeVersion.GitVersion -}}
+apiVersion: networking.k8s.io/v1
+{{- else if semverCompare ">=1.14-0" $.Capabilities.KubeVersion.GitVersion -}}
+apiVersion: networking.k8s.io/v1beta1
+{{- else -}}
+apiVersion: extensions/v1beta1
+{{- end }}
+kind: Ingress
+metadata:
+  name: {{ $ingressName }}
+  labels:
+    {{- include "sts.labels" $ | nindent 4 }}
+    ingress-domain: {{ $config.domain | replace "." "-" }}
+  annotations:
+    {{- if $config.certManager }}
+    {{- if $config.certManager.enabled }}
+    cert-manager.io/cluster-issuer: {{ $config.certManager.issuer }}
+    {{- end }}
+    {{- end }}
+    {{- if $config.className }}
+    {{- if eq $config.className "haproxy" }}
+    haproxy.ingress.kubernetes.io/ssl-redirect: "true"
+    {{- end }}
+    {{- end }}
+    {{- if $config.externalDns }}
+    {{- include "sts.externalDnsHostname" (dict "domain" $config.domain "externalDns" $config.externalDns) | nindent 4 }}
+    {{- end }}
+    {{- with $config.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  {{- if and $config.className (semverCompare ">=1.18-0" $.Capabilities.KubeVersion.GitVersion) }}
+  ingressClassName: {{ $config.className }}
+  {{- end }}
+  {{- if $config.tls }}
+  tls:
+    - hosts:
+        - {{ $config.domain | quote }}
+      secretName: {{ $tlsSecretName }}
+  {{- end }}
+  rules:
+    - host: {{ $config.domain | quote }}
+      http:
+        paths:
+          {{- range $config.paths | default (list (dict "path" "/" "pathType" "Prefix")) }}
+          - path: {{ .path }}
+            {{- if and .pathType (semverCompare ">=1.18-0" $.Capabilities.KubeVersion.GitVersion) }}
+            pathType: {{ .pathType }}
+            {{- end }}
+            backend:
+              {{- if semverCompare ">=1.19-0" $.Capabilities.KubeVersion.GitVersion }}
+              service:
+                name: {{ $fullName }}
+                port:
+                  number: {{ $svcPort }}
+              {{- else }}
+              serviceName: {{ $fullName }}
+              servicePort: {{ $svcPort }}
+              {{- end }}
+          {{- end }}
+{{- end }}
+{{- end }}
+{{- end }}

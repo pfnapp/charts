@@ -2,9 +2,9 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: "{{ include "deploy.fullname" . }}-statefulset-test"
+  name: "{{ include "sts.fullname" . }}-statefulset-test"
   labels:
-    {{- include "deploy.labels" . | nindent 4 }}
+    {{- include "sts.labels" . | nindent 4 }}
   annotations:
     "helm.sh/hook": test
 spec:
@@ -18,7 +18,7 @@ spec:
           echo "Testing StatefulSet deployment..."
           
           # Test if StatefulSet exists
-          if ! nslookup {{ include "deploy.fullname" . }}{{- if .Values.logging.enabled }}-service{{- end }}-0.{{ .Values.statefulset.serviceName | default (include "deploy.fullname" .) }}; then
+          if ! nslookup {{ include "sts.fullname" . }}{{- if .Values.logging.enabled }}-service{{- end }}-0.{{ .Values.statefulset.serviceName | default (include "sts.fullname" .) }}; then
             echo "ERROR: StatefulSet pod DNS resolution failed"
             exit 1
           fi
@@ -27,7 +27,7 @@ spec:
           
           # Test service connectivity if service port is defined
           {{- if .Values.service.port }}
-          if ! nc -z {{ include "deploy.fullname" . }} {{ .Values.service.port }}; then
+          if ! nc -z {{ include "sts.fullname" . }} {{ .Values.service.port }}; then
             echo "ERROR: Service connectivity test failed"
             exit 1
           fi

@@ -1,17 +1,17 @@
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: {{ include "common.fullname" . }}{{- if .Values.logging.enabled }}-service{{- end }}
+  name: {{ include "sts.fullname" . }}{{- if .Values.logging.enabled }}-service{{- end }}
   labels:
-    {{- include "common.labels" . | nindent 4 }}
+    {{- include "sts.labels" . | nindent 4 }}
 spec:
   {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.replicaCount }}
   {{- end }}
-  serviceName: {{ .Values.statefulset.serviceName | default (include "common.fullname" .) }}
+  serviceName: {{ .Values.statefulset.serviceName | default (include "sts.fullname" .) }}
   selector:
     matchLabels:
-      {{- include "common.selectorLabels" . | nindent 6 }}
+      {{- include "sts.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       {{- with .Values.podAnnotations }}
@@ -19,13 +19,13 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       labels:
-        {{- include "common.selectorLabels" . | nindent 8 }}
+        {{- include "sts.selectorLabels" . | nindent 8 }}
     spec:
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      serviceAccountName: {{ include "common.serviceAccountName" . }}
+      serviceAccountName: {{ include "sts.serviceAccountName" . }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
       {{- with .Values.nodeSelector }}
@@ -155,11 +155,11 @@ spec:
           envFrom:
             {{- if .Values.configMap.enabled }}
             - configMapRef:
-                name: {{ include "common.fullname" . }}-config
+                name: {{ include "sts.fullname" . }}-config
             {{- end }}
             {{- if .Values.secret.enabled }}
             - secretRef:
-                name: {{ include "common.fullname" . }}-secret
+                name: {{ include "sts.fullname" . }}-secret
             {{- end }}
             {{- range .Values.envFrom }}
             {{- if .configMapRef }}

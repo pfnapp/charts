@@ -2,7 +2,7 @@ apiVersion: v2
 name: sts
 description: A Helm chart for deploying stateful applications as StatefulSets
 type: application
-version: 2.0.1
+version: 2.1.0
 appVersion: "latest"
 home: https://pfnapp.github.io/charts
 maintainers:
@@ -14,7 +14,3 @@ keywords:
   - configmap
   - secret
   - persistent-volume
-dependencies:
-- name: common
-  version: "1.0.1"
-  repository: "file://../common"
