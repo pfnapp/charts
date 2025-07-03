@@ -3,6 +3,23 @@ entries:
   common:
   - apiVersion: v2
     appVersion: 1.0.0
+    created: "2025-07-03T07:27:35.390719773Z"
+    description: A library of common templates for PFNApp charts
+    digest: 9015cd724727d9fe9a6861e74e7a30d0d387b1fe371dcbb8927604fb9ce58477
+    home: https://pfnapp.github.io/charts
+    keywords:
+    - library
+    - templates
+    - pfnapp
+    maintainers:
+    - name: pfnapp-team
+    name: common
+    type: library
+    urls:
+    - https://github.com/pfnapp/charts/releases/download/common-1.0.1/common-1.0.1.tgz
+    version: 1.0.1
+  - apiVersion: v2
+    appVersion: 1.0.0
     created: "2025-07-02T00:36:53.163659873Z"
     description: A library of common templates for PFNApp charts
     digest: de454c939fa27a776c77231ab26b337e7974574097a6be87ddb79fa704a60756
@@ -19,6 +36,29 @@ entries:
     - https://github.com/pfnapp/charts/releases/download/common-1.0.0/common-1.0.0.tgz
     version: 1.0.0
   deploy:
+  - apiVersion: v2
+    appVersion: latest
+    created: "2025-07-03T07:27:35.534627778Z"
+    dependencies:
+    - name: common
+      repository: file://../common
+      version: 1.0.1
+    description: A Helm chart for deploying stateless applications as Deployments
+    digest: 203c929c59c545dcde6654d53885d10c81ea37b82cf14e565745801f1c34e68c
+    home: https://pfnapp.github.io/charts
+    keywords:
+    - deployment
+    - ingress
+    - haproxy
+    - configmap
+    - secret
+    maintainers:
+    - name: pfnapp-team
+    name: deploy
+    type: application
+    urls:
+    - https://github.com/pfnapp/charts/releases/download/deploy-2.0.1/deploy-2.0.1.tgz
+    version: 2.0.1
   - apiVersion: v2
     appVersion: latest
     created: "2025-07-02T00:36:53.38814466Z"
@@ -550,6 +590,30 @@ entries:
   sts:
   - apiVersion: v2
     appVersion: latest
+    created: "2025-07-03T07:27:35.665269822Z"
+    dependencies:
+    - name: common
+      repository: file://../common
+      version: 1.0.1
+    description: A Helm chart for deploying stateful applications as StatefulSets
+    digest: d6dee6321dd83bd5d5774aca35910738ae7f3afbd7b95e1e57f18c8563208781
+    home: https://pfnapp.github.io/charts
+    keywords:
+    - statefulset
+    - ingress
+    - haproxy
+    - configmap
+    - secret
+    - persistent-volume
+    maintainers:
+    - name: pfnapp-team
+    name: sts
+    type: application
+    urls:
+    - https://github.com/pfnapp/charts/releases/download/sts-2.0.1/sts-2.0.1.tgz
+    version: 2.0.1
+  - apiVersion: v2
+    appVersion: latest
     created: "2025-07-02T00:36:53.500231601Z"
     dependencies:
     - name: common
@@ -572,4 +636,4 @@ entries:
     urls:
     - https://github.com/pfnapp/charts/releases/download/sts-2.0.0/sts-2.0.0.tgz
     version: 2.0.0
-generated: "2025-07-02T00:36:53.500376512Z"
+generated: "2025-07-03T07:27:35.66545494Z"
