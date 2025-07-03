@@ -1,0 +1,277 @@
+# Redis Cluster
+# Target: Redis cluster with multiple instances and persistent storage
+# Chart: pfnapp/sts
+# Features: StatefulSet with multiple replicas, unique storage per instance, cluster configuration
+
+# Redis container configuration
+image:
+  repository: redis
+  tag: "7-alpine"
+  pullPolicy: IfNotPresent
+
+# Multiple instances for Redis cluster
+replicaCount: 6  # Minimum for Redis cluster (3 masters + 3 slaves)
+
+# Resource management for Redis workload
+resources:
+  limits:
+    cpu: 1000m
+    memory: 2Gi
+  requests:
+    cpu: 200m
+    memory: 512Mi
+
+# Service configuration for Redis cluster
+service:
+  type: ClusterIP
+  ports:
+    - name: redis
+      port: 6379
+      targetPort: 6379
+      protocol: TCP
+    - name: cluster
+      port: 16379
+      targetPort: 16379
+      protocol: TCP
+
+# Headless service for stable network identity
+headlessService:
+  enabled: true
+
+# Unique persistent storage for each Redis instance
+simpleStorage:
+  enabled: true
+  size: 20Gi
+  storageClass: "fast-ssd"
+  mountPath: /data
+  accessModes:
+    - ReadWriteOnce  # Unique storage per Redis instance
+
+# Service account for Redis operations
+serviceAccount:
+  create: true
+  name: "redis-cluster-sa"
+
+# Redis health checks
+livenessProbe:
+  exec:
+    command:
+      - sh
+      - -c
+      - "redis-cli ping"
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 5
+
+readinessProbe:
+  exec:
+    command:
+      - sh
+      - -c
+      - "redis-cli ping"
+  initialDelaySeconds: 5
+  periodSeconds: 5
+  timeoutSeconds: 3
+  failureThreshold: 5
+
+startupProbe:
+  exec:
+    command:
+      - sh
+      - -c
+      - "redis-cli ping"
+  initialDelaySeconds: 10
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 30
+
+# Redis configuration environment variables
+env:
+  - name: REDIS_CLUSTER_ENABLED
+    value: "yes"
+  - name: REDIS_CLUSTER_REQUIRE_FULL_COVERAGE
+    value: "no"
+  - name: REDIS_CLUSTER_CONFIG_FILE
+    value: "/etc/redis/redis.conf"
+  - name: REDIS_DATA_DIR
+    value: "/data"
+  - name: REDIS_LOG_LEVEL
+    value: "notice"
+
+# Redis cluster configuration
+configMap:
+  enabled: true
+  data:
+    redis.conf: |
+      # Redis cluster configuration
+      port 6379
+      cluster-enabled yes
+      cluster-config-file nodes.conf
+      cluster-node-timeout 5000
+      cluster-announce-ip ${HOSTNAME}.redis-cluster
+      cluster-announce-port 6379
+      cluster-announce-bus-port 16379
+      
+      # Persistence
+      dir /data
+      save 900 1
+      save 300 10
+      save 60 10000
+      stop-writes-on-bgsave-error yes
+      rdbcompression yes
+      rdbchecksum yes
+      dbfilename dump.rdb
+      
+      # AOF persistence
+      appendonly yes
+      appendfilename "appendonly.aof"
+      appendfsync everysec
+      no-appendfsync-on-rewrite no
+      auto-aof-rewrite-percentage 100
+      auto-aof-rewrite-min-size 64mb
+      aof-load-truncated yes
+      
+      # Memory management
+      maxmemory-policy allkeys-lru
+      
+      # Logging
+      loglevel notice
+      logfile ""
+      
+      # Security
+      protected-mode no
+      
+      # Network
+      tcp-keepalive 300
+      timeout 0
+      
+      # Performance
+      tcp-backlog 511
+      databases 16
+      
+    init-cluster.sh: |
+      #!/bin/bash
+      set -e
+      
+      # Wait for all Redis instances to be ready
+      echo "Waiting for Redis instances to be ready..."
+      for i in $(seq 0 $((REDIS_CLUSTER_SIZE - 1))); do
+        while ! redis-cli -h redis-cluster-${i}.redis-cluster ping; do
+          echo "Waiting for redis-cluster-${i}..."
+          sleep 5
+        done
+      done
+      
+      # Create cluster if not exists
+      if [ "${HOSTNAME}" = "redis-cluster-0" ]; then
+        echo "Initializing Redis cluster..."
+        CLUSTER_NODES=""
+        for i in $(seq 0 $((REDIS_CLUSTER_SIZE - 1))); do
+          CLUSTER_NODES="${CLUSTER_NODES} redis-cluster-${i}.redis-cluster:6379"
+        done
+        
+        echo "Creating cluster with nodes: ${CLUSTER_NODES}"
+        redis-cli --cluster create ${CLUSTER_NODES} --cluster-replicas 1 --cluster-yes || true
+      fi
+
+# Mount Redis configuration
+volumeConfigMaps:
+  enabled: true
+  items:
+    - name: redis-config
+      mountPath: /etc/redis
+      existingConfigMap: "{{ include \"sts.fullname\" . }}"
+
+# Init container to initialize cluster
+initContainers:
+  - name: cluster-init
+    image: redis:7-alpine
+    command:
+      - /bin/sh
+      - /scripts/init-cluster.sh
+    env:
+      - name: REDIS_CLUSTER_SIZE
+        value: "6"
+    volumeMounts:
+      - name: redis-scripts
+        mountPath: /scripts
+    resources:
+      limits:
+        cpu: 100m
+        memory: 128Mi
+      requests:
+        cpu: 50m
+        memory: 64Mi
+
+# Volume for init scripts
+volumes:
+  - name: redis-scripts
+    configMap:
+      name: "{{ include \"sts.fullname\" . }}"
+      defaultMode: 0755
+      items:
+        - key: init-cluster.sh
+          path: init-cluster.sh
+
+# Security context for Redis
+securityContext:
+  runAsUser: 999  # redis user
+  runAsGroup: 999
+  fsGroup: 999
+  runAsNonRoot: true
+
+podSecurityContext:
+  seccompProfile:
+    type: RuntimeDefault
+
+# Node preferences for cache workloads
+nodeSelector:
+  workload-type: cache
+
+# Tolerations for dedicated cache nodes
+tolerations:
+  - key: workload-type
+    operator: Equal
+    value: cache
+    effect: NoSchedule
+
+# Anti-affinity to spread Redis instances across nodes
+affinity:
+  podAntiAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchExpressions:
+            - key: app.kubernetes.io/name
+              operator: In
+              values:
+                - redis-cluster
+        topologyKey: kubernetes.io/hostname
+
+# Update strategy for ordered updates
+updateStrategy:
+  type: RollingUpdate
+  rollingUpdate:
+    partition: 0
+
+# Enable logging for Redis monitoring
+logging:
+  enabled: true
+
+# Additional monitoring sidecar
+sidecars:
+  - name: redis-exporter
+    image: oliver006/redis_exporter:latest
+    ports:
+      - containerPort: 9121
+        name: metrics
+    env:
+      - name: REDIS_ADDR
+        value: "redis://localhost:6379"
+    resources:
+      limits:
+        cpu: 100m
+        memory: 128Mi
+      requests:
+        cpu: 50m
+        memory: 64Mi

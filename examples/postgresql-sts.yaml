@@ -1,0 +1,211 @@
+# PostgreSQL Database
+# Target: Production PostgreSQL database with persistent storage
+# Chart: pfnapp/sts
+# Features: StatefulSet, unique storage per pod, stable identity, service account
+
+# PostgreSQL container configuration
+image:
+  repository: postgres
+  tag: "15-alpine"
+  pullPolicy: IfNotPresent
+
+# Single instance by default (can be scaled for read replicas)
+replicaCount: 1
+
+# Resource management for database workload
+resources:
+  limits:
+    cpu: 2000m
+    memory: 4Gi
+  requests:
+    cpu: 500m
+    memory: 1Gi
+
+# Service configuration for database access
+service:
+  type: ClusterIP
+  ports:
+    - name: postgresql
+      port: 5432
+      targetPort: 5432
+      protocol: TCP
+
+# Unique persistent storage for each database instance
+simpleStorage:
+  enabled: true
+  size: 50Gi
+  storageClass: "fast-ssd"
+  mountPath: /var/lib/postgresql/data
+  accessModes:
+    - ReadWriteOnce  # Unique storage per pod
+
+# Service account for database operations
+serviceAccount:
+  create: true
+  name: "postgresql-service-account"
+  annotations:
+    # For cloud provider IAM integration
+    iam.gke.io/gcp-service-account: "postgresql-sa@project.iam.gserviceaccount.com"
+
+# Database health checks
+livenessProbe:
+  exec:
+    command:
+      - /bin/sh
+      - -c
+      - exec pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB" -h 127.0.0.1 -p 5432
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 6
+
+readinessProbe:
+  exec:
+    command:
+      - /bin/sh
+      - -c
+      - exec pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB" -h 127.0.0.1 -p 5432
+  initialDelaySeconds: 5
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 6
+
+startupProbe:
+  exec:
+    command:
+      - /bin/sh
+      - -c
+      - exec pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB" -h 127.0.0.1 -p 5432
+  initialDelaySeconds: 10
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 30
+
+# Database environment variables
+env:
+  - name: POSTGRES_DB
+    value: "myapp"
+  - name: POSTGRES_USER
+    valueFrom:
+      secretKeyRef:
+        name: postgresql-credentials
+        key: username
+  - name: POSTGRES_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: postgresql-credentials
+        key: password
+  - name: PGDATA
+    value: "/var/lib/postgresql/data/pgdata"
+
+# Database credentials stored in secret
+secret:
+  enabled: true
+  data:
+    username: cG9zdGdyZXM=  # base64: postgres
+    password: c3VwZXJzZWNyZXRwYXNzd29yZA==  # base64: supersecretpassword
+
+# PostgreSQL configuration via ConfigMap
+configMap:
+  enabled: true
+  data:
+    postgresql.conf: |
+      # PostgreSQL configuration
+      listen_addresses = '*'
+      port = 5432
+      max_connections = 100
+      shared_buffers = 256MB
+      effective_cache_size = 1GB
+      maintenance_work_mem = 64MB
+      checkpoint_completion_target = 0.9
+      wal_buffers = 16MB
+      default_statistics_target = 100
+      random_page_cost = 1.1
+      effective_io_concurrency = 200
+      work_mem = 4MB
+      min_wal_size = 80MB
+      max_wal_size = 1GB
+      
+      # Logging
+      log_destination = 'stderr'
+      logging_collector = on
+      log_directory = 'log'
+      log_filename = 'postgresql-%Y-%m-%d_%H%M%S.log'
+      log_line_prefix = '%t [%p]: [%l-1] user=%u,db=%d,app=%a,client=%h '
+      log_checkpoints = on
+      log_connections = on
+      log_disconnections = on
+      log_lock_waits = on
+      log_temp_files = 0
+      log_autovacuum_min_duration = 0
+      log_error_verbosity = default
+      
+    pg_hba.conf: |
+      # PostgreSQL Client Authentication Configuration File
+      local   all             all                                     trust
+      host    all             all             127.0.0.1/32            md5
+      host    all             all             ::1/128                 md5
+      host    all             all             0.0.0.0/0               md5
+
+# Mount PostgreSQL configuration files
+volumeConfigMaps:
+  enabled: true
+  items:
+    - name: postgresql-config
+      mountPath: /etc/postgresql
+      existingConfigMap: "{{ include \"sts.fullname\" . }}"
+      data:
+        postgresql.conf: "{{ .Values.configMap.data.\"postgresql.conf\" }}"
+        pg_hba.conf: "{{ .Values.configMap.data.\"pg_hba.conf\" }}"
+
+# Additional volume for PostgreSQL socket
+volumes:
+  - name: postgresql-socket
+    emptyDir: {}
+
+volumeMounts:
+  - name: postgresql-socket
+    mountPath: /var/run/postgresql
+
+# Security context for PostgreSQL
+securityContext:
+  runAsUser: 999  # postgres user
+  runAsGroup: 999
+  fsGroup: 999
+  runAsNonRoot: true
+
+podSecurityContext:
+  seccompProfile:
+    type: RuntimeDefault
+
+# Node preferences for database workloads
+nodeSelector:
+  workload-type: database
+
+# Tolerations for dedicated database nodes
+tolerations:
+  - key: workload-type
+    operator: Equal
+    value: database
+    effect: NoSchedule
+
+# Anti-affinity for multiple replicas (if scaling)
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                  - postgresql
+          topologyKey: kubernetes.io/hostname
+
+# Enable logging for database monitoring
+logging:
+  enabled: true
+
+# No autoscaling for stateful databases
+# (StatefulSets should be scaled manually or via operators)

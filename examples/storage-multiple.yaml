@@ -1,0 +1,274 @@
+# Multiple Storage Scenarios
+# Target: Application requiring multiple types of storage
+# Chart: pfnapp/deploy
+# Features: Multiple volume types, shared and unique storage, different storage classes
+
+# Application configuration
+image:
+  repository: mycompany/data-processor
+  tag: "v1.0.0"
+  pullPolicy: IfNotPresent
+
+replicaCount: 2
+
+# Service configuration
+service:
+  type: ClusterIP
+  port: 8080
+  targetPort: 8080
+
+# Basic ingress
+simpleIngress:
+  enabled: true
+  hosts:
+    - host: data-processor.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+
+# Multiple storage configurations for different use cases
+simpleStorage:
+  enabled: true
+  size: 50Gi
+  storageClass: "fast-ssd"
+  mountPath: /app/data
+  accessModes:
+    - ReadWriteMany  # Shared data storage between pods
+
+# Additional volumes for different storage needs
+volumes:
+  # Fast cache storage (NVMe SSD)
+  - name: cache-storage
+    persistentVolumeClaim:
+      claimName: data-processor-cache
+  
+  # Log storage (standard SSD)
+  - name: log-storage
+    persistentVolumeClaim:
+      claimName: data-processor-logs
+  
+  # Backup storage (slower, cheaper storage)
+  - name: backup-storage
+    persistentVolumeClaim:
+      claimName: data-processor-backup
+  
+  # Temporary processing storage (emptyDir)
+  - name: temp-processing
+    emptyDir:
+      sizeLimit: 10Gi
+  
+  # Configuration from ConfigMap
+  - name: app-config
+    configMap:
+      name: "{{ include \"deploy.fullname\" . }}"
+  
+  # Secrets volume
+  - name: app-secrets
+    secret:
+      secretName: "{{ include \"deploy.fullname\" . }}"
+      defaultMode: 0400
+
+# Volume mounts for all storage types
+volumeMounts:
+  # Main data storage (shared between pods)
+  - name: data-storage
+    mountPath: /app/data
+  
+  # Fast cache storage for temporary data
+  - name: cache-storage
+    mountPath: /app/cache
+  
+  # Log storage for application logs
+  - name: log-storage
+    mountPath: /app/logs
+  
+  # Backup storage for periodic backups
+  - name: backup-storage
+    mountPath: /app/backup
+  
+  # Temporary processing space
+  - name: temp-processing
+    mountPath: /tmp/processing
+  
+  # Configuration files
+  - name: app-config
+    mountPath: /app/config
+    readOnly: true
+  
+  # Secrets
+  - name: app-secrets
+    mountPath: /app/secrets
+    readOnly: true
+
+# Create additional PVCs for different storage types
+additionalPVCs:
+  # Fast cache storage
+  cache:
+    enabled: true
+    storageClass: "nvme-ssd"
+    size: 20Gi
+    accessModes:
+      - ReadWriteMany
+    annotations:
+      volume.kubernetes.io/storage-provisioner: "ebs.csi.aws.com"
+  
+  # Log storage
+  logs:
+    enabled: true
+    storageClass: "standard-ssd"
+    size: 100Gi
+    accessModes:
+      - ReadWriteMany
+    annotations:
+      volume.kubernetes.io/storage-provisioner: "ebs.csi.aws.com"
+  
+  # Backup storage
+  backup:
+    enabled: true
+    storageClass: "standard-hdd"
+    size: 500Gi
+    accessModes:
+      - ReadWriteMany
+    annotations:
+      volume.kubernetes.io/storage-provisioner: "ebs.csi.aws.com"
+
+# Application configuration
+configMap:
+  enabled: true
+  data:
+    processor-config.yaml: |
+      data_processor:
+        # Storage paths
+        data_path: "/app/data"
+        cache_path: "/app/cache"
+        log_path: "/app/logs"
+        backup_path: "/app/backup"
+        temp_path: "/tmp/processing"
+        
+        # Storage quotas
+        max_cache_size: "15GB"
+        max_log_retention: "30d"
+        backup_schedule: "0 2 * * *"
+        
+        # Processing configuration
+        batch_size: 1000
+        max_concurrent_jobs: 4
+        cleanup_temp_files: true
+        
+        # Performance tuning
+        cache_ttl: "1h"
+        log_level: "info"
+        metrics_enabled: true
+
+# Environment variables for storage paths
+env:
+  - name: DATA_PATH
+    value: "/app/data"
+  - name: CACHE_PATH
+    value: "/app/cache"
+  - name: LOG_PATH
+    value: "/app/logs"
+  - name: BACKUP_PATH
+    value: "/app/backup"
+  - name: TEMP_PATH
+    value: "/tmp/processing"
+  - name: CONFIG_PATH
+    value: "/app/config"
+
+# Init container to set up storage permissions
+initContainers:
+  - name: storage-init
+    image: busybox:1.35
+    command:
+      - /bin/sh
+      - -c
+      - |
+        # Create required directories
+        mkdir -p /app/data /app/cache /app/logs /app/backup
+        
+        # Set permissions
+        chmod 755 /app/data /app/cache /app/logs /app/backup
+        chmod 1777 /tmp/processing
+        
+        # Create initial directory structure
+        mkdir -p /app/data/{input,output,processed}
+        mkdir -p /app/logs/{app,access,error}
+        mkdir -p /app/backup/{daily,weekly,monthly}
+        
+        echo "Storage initialization complete"
+    
+    volumeMounts:
+      - name: data-storage
+        mountPath: /app/data
+      - name: cache-storage
+        mountPath: /app/cache
+      - name: log-storage
+        mountPath: /app/logs
+      - name: backup-storage
+        mountPath: /app/backup
+      - name: temp-processing
+        mountPath: /tmp/processing
+    
+    securityContext:
+      runAsUser: 0
+      runAsGroup: 0
+
+# Health checks
+livenessProbe:
+  httpGet:
+    path: /health
+    port: 8080
+  initialDelaySeconds: 30
+  periodSeconds: 10
+
+readinessProbe:
+  httpGet:
+    path: /ready
+    port: 8080
+  initialDelaySeconds: 10
+  periodSeconds: 5
+
+# Resource management for data processing workload
+resources:
+  limits:
+    cpu: 2000m
+    memory: 4Gi
+  requests:
+    cpu: 500m
+    memory: 1Gi
+
+# Security context
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1001
+  runAsGroup: 1001
+  fsGroup: 1001
+
+# Autoscaling based on processing load
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 6
+  targetCPUUtilizationPercentage: 75
+
+# Node preferences for data processing
+nodeSelector:
+  workload-type: data-processing
+
+# Affinity to spread across availability zones
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                  - data-processor
+          topologyKey: topology.kubernetes.io/zone
+
+# Enable logging
+logging:
+  enabled: true

@@ -1,0 +1,285 @@
+# API Gateway/Service
+# Target: RESTful API service with external configuration and autoscaling
+# Chart: pfnapp/deploy  
+# Features: Deployment, external secrets, multiple ingress paths, comprehensive health checks
+
+# API application container
+image:
+  repository: mycompany/api-gateway
+  tag: "v1.2.3"
+  pullPolicy: IfNotPresent
+
+# Multiple replicas for high availability
+replicaCount: 3
+
+# Resource management for API workload
+resources:
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+  requests:
+    cpu: 200m
+    memory: 256Mi
+
+# Horizontal Pod Autoscaler for API traffic
+autoscaling:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 20
+  targetCPUUtilizationPercentage: 75
+  targetMemoryUtilizationPercentage: 85
+
+# Multiple ingress paths for different API versions
+ingresses:
+  api-v1:
+    enabled: true
+    className: "nginx"
+    annotations:
+      nginx.ingress.kubernetes.io/rewrite-target: /$2
+      nginx.ingress.kubernetes.io/rate-limit: "100"
+      nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+    hosts:
+      - host: api.example.com
+        paths:
+          - path: /v1(/|$)(.*)
+            pathType: Prefix
+    tls:
+      - secretName: api-tls-cert
+        hosts:
+          - api.example.com
+  
+  api-v2:
+    enabled: true
+    className: "nginx"
+    annotations:
+      nginx.ingress.kubernetes.io/rewrite-target: /$2
+      nginx.ingress.kubernetes.io/rate-limit: "200"
+      nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+    hosts:
+      - host: api.example.com
+        paths:
+          - path: /v2(/|$)(.*)
+            pathType: Prefix
+    tls:
+      - secretName: api-tls-cert
+        hosts:
+          - api.example.com
+
+# Service configuration with multiple ports
+service:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+      protocol: TCP
+    - name: metrics
+      port: 9090
+      targetPort: 9090
+      protocol: TCP
+
+# Comprehensive health checks for API
+livenessProbe:
+  httpGet:
+    path: /health/live
+    port: 8080
+    httpHeaders:
+      - name: X-Health-Check
+        value: "liveness"
+  initialDelaySeconds: 60
+  periodSeconds: 20
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /health/ready
+    port: 8080
+    httpHeaders:
+      - name: X-Health-Check
+        value: "readiness"
+  initialDelaySeconds: 10
+  periodSeconds: 10
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+startupProbe:
+  httpGet:
+    path: /health/startup
+    port: 8080
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 30
+
+# External environment configuration
+env:
+  - name: APP_ENV
+    value: "production"
+  - name: LOG_LEVEL
+    value: "info"
+  - name: PORT
+    value: "8080"
+  - name: METRICS_PORT
+    value: "9090"
+  
+  # Database connection from external secret
+  - name: DATABASE_URL
+    valueFrom:
+      secretKeyRef:
+        name: api-database-credentials
+        key: connection-string
+  
+  # API keys from external secret
+  - name: JWT_SECRET
+    valueFrom:
+      secretKeyRef:
+        name: api-secrets
+        key: jwt-secret
+  
+  - name: API_KEY
+    valueFrom:
+      secretKeyRef:
+        name: api-secrets
+        key: api-key
+  
+  # Configuration from external ConfigMap
+  - name: FEATURE_FLAGS
+    valueFrom:
+      configMapKeyRef:
+        name: api-feature-flags
+        key: flags.json
+  
+  - name: CORS_ORIGINS
+    valueFrom:
+      configMapKeyRef:
+        name: api-configuration
+        key: cors-origins
+
+# Reference external ConfigMap for application config
+envFrom:
+  - configMapRef:
+      name: api-global-config
+  - secretRef:
+      name: api-environment-secrets
+
+# Application configuration via ConfigMap
+configMap:
+  enabled: true
+  data:
+    app-config.yaml: |
+      api:
+        name: "API Gateway"
+        version: "v1.2.3"
+        timeout: 30s
+        max_request_size: "10MB"
+        
+      database:
+        max_connections: 50
+        connection_timeout: "5s"
+        query_timeout: "30s"
+        
+      cache:
+        ttl: "300s"
+        max_entries: 10000
+        
+      logging:
+        format: "json"
+        level: "info"
+        
+      metrics:
+        enabled: true
+        endpoint: "/metrics"
+        
+      security:
+        cors:
+          enabled: true
+          max_age: 3600
+        rate_limiting:
+          enabled: true
+          requests_per_minute: 1000
+          
+    feature-flags.json: |
+      {
+        "new_authentication": true,
+        "enhanced_logging": true,
+        "experimental_cache": false,
+        "rate_limiting_v2": true
+      }
+
+# Mount configuration files
+volumeConfigMaps:
+  enabled: true
+  items:
+    - name: app-config
+      mountPath: /app/config
+      existingConfigMap: "{{ include \"deploy.fullname\" . }}"
+
+# Temporary storage for API logs and cache
+simpleStorage:
+  enabled: true
+  size: 10Gi
+  storageClass: "fast-ssd"
+  mountPath: /app/storage
+  accessModes:
+    - ReadWriteMany  # Shared temporary storage
+
+# Service account for external integrations
+serviceAccount:
+  create: true
+  name: "api-gateway-sa"
+  annotations:
+    # For cloud provider integrations
+    eks.amazonaws.com/role-arn: "arn:aws:iam::123456789012:role/api-gateway-role"
+
+# Security context
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1001
+  runAsGroup: 1001
+  readOnlyRootFilesystem: true
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+
+podSecurityContext:
+  seccompProfile:
+    type: RuntimeDefault
+
+# Node preferences for API workloads
+nodeSelector:
+  workload-type: api
+
+# Spread across availability zones
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                  - api-gateway
+          topologyKey: topology.kubernetes.io/zone
+
+# Enable logging for API monitoring
+logging:
+  enabled: true
+
+# Additional containers for monitoring/logging
+sidecars:
+  - name: log-shipper
+    image: fluent/fluent-bit:latest
+    volumeMounts:
+      - name: api-logs
+        mountPath: /var/log/api
+    resources:
+      limits:
+        cpu: 100m
+        memory: 128Mi
+      requests:
+        cpu: 50m
+        memory: 64Mi

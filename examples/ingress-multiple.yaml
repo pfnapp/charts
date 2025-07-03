@@ -1,0 +1,164 @@
+# Multiple Ingress Configuration
+# Target: Application with multiple ingress endpoints and routing strategies
+# Chart: pfnapp/deploy
+# Features: Multiple named ingress resources, different SSL strategies, path-based routing
+
+# Application configuration
+image:
+  repository: mycompany/multi-service-app
+  tag: "v2.1.0"
+  pullPolicy: IfNotPresent
+
+replicaCount: 2
+
+# Service with multiple ports for different endpoints
+service:
+  type: ClusterIP
+  ports:
+    - name: web
+      port: 8080
+      targetPort: 8080
+      protocol: TCP
+    - name: api
+      port: 8081
+      targetPort: 8081
+      protocol: TCP
+    - name: admin
+      port: 8082
+      targetPort: 8082
+      protocol: TCP
+
+# Multiple ingress configurations for different access patterns
+ingresses:
+  # Public web interface
+  public-web:
+    enabled: true
+    className: "nginx-public"
+    annotations:
+      nginx.ingress.kubernetes.io/ssl-redirect: "true"
+      nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+      cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    hosts:
+      - host: app.example.com
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                port:
+                  name: web
+    tls:
+      - secretName: app-web-tls
+        hosts:
+          - app.example.com
+  
+  # API endpoints with rate limiting
+  api-endpoints:
+    enabled: true
+    className: "nginx-public"
+    annotations:
+      nginx.ingress.kubernetes.io/rate-limit: "100"
+      nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+      nginx.ingress.kubernetes.io/rewrite-target: /$2
+      cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    hosts:
+      - host: api.example.com
+        paths:
+          - path: /v1(/|$)(.*)
+            pathType: Prefix
+            backend:
+              service:
+                port:
+                  name: api
+          - path: /v2(/|$)(.*)
+            pathType: Prefix
+            backend:
+              service:
+                port:
+                  name: api
+    tls:
+      - secretName: app-api-tls
+        hosts:
+          - api.example.com
+  
+  # Internal admin interface (whitelist IPs)
+  admin-internal:
+    enabled: true
+    className: "nginx-internal"
+    annotations:
+      nginx.ingress.kubernetes.io/whitelist-source-range: "10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"
+      nginx.ingress.kubernetes.io/auth-type: basic
+      nginx.ingress.kubernetes.io/auth-secret: admin-auth
+      nginx.ingress.kubernetes.io/auth-realm: "Admin Access Required"
+    hosts:
+      - host: admin.internal.example.com
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                port:
+                  name: admin
+    tls:
+      - secretName: admin-internal-tls
+        hosts:
+          - admin.internal.example.com
+
+# Basic auth secret for admin interface
+secret:
+  enabled: true
+  data:
+    # admin:password (generated with: htpasswd -nb admin password | base64)
+    auth: YWRtaW46JGFwcjEkSDY1dnNpM1IkRGJSdVhFcFVIVUFVcjdGSjhOMzBVMA==
+
+# Application configuration
+env:
+  - name: WEB_PORT
+    value: "8080"
+  - name: API_PORT
+    value: "8081"
+  - name: ADMIN_PORT
+    value: "8082"
+  - name: LOG_LEVEL
+    value: "info"
+
+# Health checks for different ports
+livenessProbe:
+  httpGet:
+    path: /health
+    port: 8080
+  initialDelaySeconds: 30
+  periodSeconds: 10
+
+readinessProbe:
+  httpGet:
+    path: /ready
+    port: 8080
+  initialDelaySeconds: 5
+  periodSeconds: 5
+
+# Resources for multi-service application
+resources:
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+  requests:
+    cpu: 200m
+    memory: 256Mi
+
+# Enable autoscaling
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 8
+  targetCPUUtilizationPercentage: 70
+
+# Security context
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1001
+  readOnlyRootFilesystem: true
+
+# Enable logging
+logging:
+  enabled: true
