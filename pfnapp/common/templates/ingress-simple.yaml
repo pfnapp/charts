@@ -1,11 +1,11 @@
 {{- if .Values.simpleIngress }}
-{{- $fullName := include "deploy.fullname" . -}}
+{{- $fullName := include "common.fullname" . -}}
 {{- $svcPort := .Values.service.port -}}
 {{- range $config := .Values.simpleIngress }}
 {{- if $config.enabled }}
-{{- $ingressName := include "deploy.ingressName" (dict "releaseName" $.Release.Name "domain" $config.domain) }}
+{{- $ingressName := include "common.ingressName" (dict "releaseName" $.Release.Name "domain" $config.domain) }}
 ---
-{{- $tlsSecretName := $config.tlsSecretName | default (include "deploy.tlsSecretName" $config.domain) }}
+{{- $tlsSecretName := $config.tlsSecretName | default (include "common.tlsSecretName" $config.domain) }}
 {{- if semverCompare ">=1.19-0" $.Capabilities.KubeVersion.GitVersion -}}
 apiVersion: networking.k8s.io/v1
 {{- else if semverCompare ">=1.14-0" $.Capabilities.KubeVersion.GitVersion -}}
@@ -17,7 +17,7 @@ kind: Ingress
 metadata:
   name: {{ $ingressName }}
   labels:
-    {{- include "deploy.labels" $ | nindent 4 }}
+    {{- include "common.labels" $ | nindent 4 }}
     ingress-domain: {{ $config.domain | replace "." "-" }}
   annotations:
     {{- if $config.certManager }}
@@ -31,7 +31,7 @@ metadata:
     {{- end }}
     {{- end }}
     {{- if $config.externalDns }}
-    {{- include "deploy.externalDnsHostname" (dict "domain" $config.domain "externalDns" $config.externalDns) | nindent 4 }}
+    {{- include "common.externalDnsHostname" (dict "domain" $config.domain "externalDns" $config.externalDns) | nindent 4 }}
     {{- end }}
     {{- with $config.annotations }}
     {{- toYaml . | nindent 4 }}

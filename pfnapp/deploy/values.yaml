@@ -9,6 +9,9 @@ app:
 # Replica count
 replicaCount: 1
 
+# Deployment type (deployment or statefulset)
+deploymentType: "deployment"
+
 # Image configuration
 image:
   repository: "nginx"
