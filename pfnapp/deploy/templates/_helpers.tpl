@@ -157,3 +157,29 @@ Generate volumeMounts for volume mount ConfigMaps and Secrets
 {{- end }}
 {{- end }}
 {{- end }}
+
+{{/*
+Generate ingress name for simple ingress
+*/}}
+{{- define "deploy.ingressName" -}}
+{{- printf "%s-%s" .releaseName (.domain | replace "." "-") | trunc 63 | trimSuffix "-" }}
+{{- end }}
+
+{{/*
+Generate TLS secret name for simple ingress
+*/}}
+{{- define "deploy.tlsSecretName" -}}
+{{- printf "%s-tls" (. | replace "." "-") | trunc 63 | trimSuffix "-" }}
+{{- end }}
+
+{{/*
+Generate external DNS hostname annotation
+*/}}
+{{- define "deploy.externalDnsHostname" -}}
+{{- if .externalDns.enabled }}
+external-dns.alpha.kubernetes.io/hostname: {{ .domain }}
+{{- if .externalDns.target }}
+external-dns.alpha.kubernetes.io/target: {{ .externalDns.target }}
+{{- end }}
+{{- end }}
+{{- end }}
