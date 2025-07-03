@@ -220,8 +220,8 @@ ingressDomains: []
   #     - path: /admin
   #       pathType: Prefix
 
-# Simplified Ingress configuration with Let's Encrypt and External DNS automation
-# Just provide domain, cert-manager issuer, and external DNS config - everything else is automated
+# Simplified Ingress configuration with Let's Encrypt, External DNS, and HAProxy automation
+# Just provide domain, cert-manager issuer, external DNS config, and HAProxy features - everything else is automated
 simpleIngress: []
   # Example configuration:
   # - enabled: true
@@ -239,7 +239,85 @@ simpleIngress: []
   #   # paths:  # Optional: defaults to [{"path": "/", "pathType": "Prefix"}]
   #   #   - path: /
   #   #     pathType: Prefix
-  #   # annotations:  # Optional: additional custom annotations
+  #   
+  #   # HAProxy-specific configuration
+  #   haproxy:
+  #     # Load balancing configuration
+  #     loadBalancing:
+  #       enabled: false
+  #       algorithm: "roundrobin"  # roundrobin, leastconn, source, uri, random
+  #       
+  #     # Sticky session configuration  
+  #     stickySession:
+  #       enabled: false
+  #       cookieName: "JSESSIONID"  # Cookie name for session persistence
+  #       strategy: "insert"        # insert, rewrite, prefix
+  #       
+  #     # Backend configuration
+  #     backend:
+  #       protocol: "http"          # http, https, h2, grpc
+  #       port: ""                  # Override backend port (optional)
+  #       
+  #     # Security features
+  #     security:
+  #       # Rate limiting
+  #       rateLimit:
+  #         enabled: false
+  #         rpm: 1000               # Requests per minute
+  #         burst: 100              # Burst capacity
+  #         
+  #       # Request/Response headers
+  #       headers:
+  #         enabled: false
+  #         request:                # Headers to add/modify in requests
+  #           # X-Forwarded-Proto: "https"
+  #           # X-Real-IP: "%ci"
+  #         response:               # Headers to add/modify in responses  
+  #           # X-Frame-Options: "DENY"
+  #           # X-Content-Type-Options: "nosniff"
+  #           
+  #     # Basic authentication
+  #     basicAuth:
+  #       enabled: false
+  #       secretName: ""            # Secret containing auth file
+  #       realm: "Protected Area"   # Authentication realm
+  #       
+  #     # IP filtering
+  #     ipFilter:
+  #       # IP whitelist
+  #       whitelist:
+  #         enabled: false
+  #         ips: []                 # List of allowed IPs/CIDRs
+  #         # - "10.0.0.0/8"
+  #         # - "192.168.1.100"
+  #       # IP blacklist  
+  #       blacklist:
+  #         enabled: false
+  #         ips: []                 # List of blocked IPs/CIDRs
+  #         # - "192.168.1.200"
+  #         
+  #     # CORS configuration
+  #     cors:
+  #       enabled: false
+  #       allowOrigin: "*"          # Allowed origins
+  #       allowMethods: "GET, POST, PUT, DELETE, OPTIONS"
+  #       allowHeaders: "DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization"
+  #       allowCredentials: true    # Allow credentials
+  #       
+  #     # Health check configuration
+  #     healthCheck:
+  #       enabled: false
+  #       path: "/health"           # Health check endpoint
+  #       interval: "30s"           # Check interval
+  #       timeout: "5s"             # Check timeout
+  #       
+  #     # Compression configuration
+  #     compression:
+  #       enabled: false
+  #       types: "text/html text/plain text/css application/json application/javascript text/xml application/xml"
+  #       minSize: "1024"           # Minimum size to compress (bytes)
+  #       
+  #   # annotations:  # Optional: additional custom annotations (will be merged with HAProxy annotations)
   #   #   custom.annotation/key: "value"
 
 # Environment variables from ConfigMap (creates ConfigMap managed by Helm)

@@ -33,6 +33,98 @@ metadata:
     {{- if $config.externalDns }}
     {{- include "sts.externalDnsHostname" (dict "domain" $config.domain "externalDns" $config.externalDns) | nindent 4 }}
     {{- end }}
+    {{- if and $config.haproxy $config.className (eq $config.className "haproxy") }}
+    {{- $haproxy := $config.haproxy }}
+    {{- /* Load balancing configuration */ -}}
+    {{- if and $haproxy.loadBalancing $haproxy.loadBalancing.enabled }}
+    haproxy.ingress.kubernetes.io/balance: {{ $haproxy.loadBalancing.algorithm | quote }}
+    {{- end }}
+    {{- /* Sticky session configuration */ -}}
+    {{- if and $haproxy.stickySession $haproxy.stickySession.enabled }}
+    haproxy.ingress.kubernetes.io/cookie-name: {{ $haproxy.stickySession.cookieName | quote }}
+    haproxy.ingress.kubernetes.io/cookie-strategy: {{ $haproxy.stickySession.strategy | quote }}
+    {{- end }}
+    {{- /* Backend protocol and port configuration */ -}}
+    {{- if and $haproxy.backend $haproxy.backend.protocol }}
+    haproxy.ingress.kubernetes.io/backend-protocol: {{ $haproxy.backend.protocol | quote }}
+    {{- end }}
+    {{- if and $haproxy.backend $haproxy.backend.port }}
+    haproxy.ingress.kubernetes.io/server-port: {{ $haproxy.backend.port | quote }}
+    {{- end }}
+    {{- /* Rate limiting */ -}}
+    {{- if and $haproxy.security $haproxy.security.rateLimit $haproxy.security.rateLimit.enabled }}
+    haproxy.ingress.kubernetes.io/rate-limit-rpm: {{ $haproxy.security.rateLimit.rpm | quote }}
+    {{- if $haproxy.security.rateLimit.burst }}
+    haproxy.ingress.kubernetes.io/rate-limit-burst: {{ $haproxy.security.rateLimit.burst | quote }}
+    {{- end }}
+    {{- end }}
+    {{- /* Request headers */ -}}
+    {{- if and $haproxy.security $haproxy.security.headers $haproxy.security.headers.enabled $haproxy.security.headers.request }}
+    {{- range $header, $value := $haproxy.security.headers.request }}
+    haproxy.ingress.kubernetes.io/set-header: {{ printf "%s %s" $header $value | quote }}
+    {{- end }}
+    {{- end }}
+    {{- /* Response headers */ -}}
+    {{- if and $haproxy.security $haproxy.security.headers $haproxy.security.headers.enabled $haproxy.security.headers.response }}
+    {{- range $header, $value := $haproxy.security.headers.response }}
+    haproxy.ingress.kubernetes.io/response-set-header: {{ printf "%s %s" $header $value | quote }}
+    {{- end }}
+    {{- end }}
+    {{- /* Basic authentication */ -}}
+    {{- if and $haproxy.basicAuth $haproxy.basicAuth.enabled $haproxy.basicAuth.secretName }}
+    haproxy.ingress.kubernetes.io/auth-type: "basic"
+    haproxy.ingress.kubernetes.io/auth-secret: {{ $haproxy.basicAuth.secretName | quote }}
+    {{- if $haproxy.basicAuth.realm }}
+    haproxy.ingress.kubernetes.io/auth-realm: {{ $haproxy.basicAuth.realm | quote }}
+    {{- end }}
+    {{- end }}
+    {{- /* IP whitelist */ -}}
+    {{- if and $haproxy.ipFilter $haproxy.ipFilter.whitelist $haproxy.ipFilter.whitelist.enabled $haproxy.ipFilter.whitelist.ips }}
+    haproxy.ingress.kubernetes.io/whitelist-source-range: {{ join "," $haproxy.ipFilter.whitelist.ips | quote }}
+    {{- end }}
+    {{- /* IP blacklist */ -}}
+    {{- if and $haproxy.ipFilter $haproxy.ipFilter.blacklist $haproxy.ipFilter.blacklist.enabled $haproxy.ipFilter.blacklist.ips }}
+    haproxy.ingress.kubernetes.io/blacklist-source-range: {{ join "," $haproxy.ipFilter.blacklist.ips | quote }}
+    {{- end }}
+    {{- /* CORS configuration */ -}}
+    {{- if and $haproxy.cors $haproxy.cors.enabled }}
+    haproxy.ingress.kubernetes.io/enable-cors: "true"
+    {{- if $haproxy.cors.allowOrigin }}
+    haproxy.ingress.kubernetes.io/cors-allow-origin: {{ $haproxy.cors.allowOrigin | quote }}
+    {{- end }}
+    {{- if $haproxy.cors.allowMethods }}
+    haproxy.ingress.kubernetes.io/cors-allow-methods: {{ $haproxy.cors.allowMethods | quote }}
+    {{- end }}
+    {{- if $haproxy.cors.allowHeaders }}
+    haproxy.ingress.kubernetes.io/cors-allow-headers: {{ $haproxy.cors.allowHeaders | quote }}
+    {{- end }}
+    {{- if ne $haproxy.cors.allowCredentials nil }}
+    haproxy.ingress.kubernetes.io/cors-allow-credentials: {{ $haproxy.cors.allowCredentials | quote }}
+    {{- end }}
+    {{- end }}
+    {{- /* Health check configuration */ -}}
+    {{- if and $haproxy.healthCheck $haproxy.healthCheck.enabled }}
+    {{- if $haproxy.healthCheck.path }}
+    haproxy.ingress.kubernetes.io/health-check-path: {{ $haproxy.healthCheck.path | quote }}
+    {{- end }}
+    {{- if $haproxy.healthCheck.interval }}
+    haproxy.ingress.kubernetes.io/health-check-interval: {{ $haproxy.healthCheck.interval | quote }}
+    {{- end }}
+    {{- if $haproxy.healthCheck.timeout }}
+    haproxy.ingress.kubernetes.io/health-check-timeout: {{ $haproxy.healthCheck.timeout | quote }}
+    {{- end }}
+    {{- end }}
+    {{- /* Compression configuration */ -}}
+    {{- if and $haproxy.compression $haproxy.compression.enabled }}
+    haproxy.ingress.kubernetes.io/enable-compression: "true"
+    {{- if $haproxy.compression.types }}
+    haproxy.ingress.kubernetes.io/compression-type: {{ $haproxy.compression.types | quote }}
+    {{- end }}
+    {{- if $haproxy.compression.minSize }}
+    haproxy.ingress.kubernetes.io/compression-min-size: {{ $haproxy.compression.minSize | quote }}
+    {{- end }}
+    {{- end }}
+    {{- end }}
     {{- with $config.annotations }}
     {{- toYaml . | nindent 4 }}
     {{- end }}
