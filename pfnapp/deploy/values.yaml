@@ -3,8 +3,17 @@
 
 # Application configuration
 app:
+  # The name of your application (used for app.kubernetes.io/name label)
+  # This is critical for proper log aggregation in OpenSearch/logging systems
+  # Should match your actual application name, not the chart name
+  # Examples: "metagocoin", "metacard-sso", "user-service"
   name: "myapp"
   version: "latest"
+
+# Override the chart name used in resource names (for backward compatibility only)
+# WARNING: Changing this for existing deployments will cause recreation of resources
+# Most users should leave this empty and use app.name instead
+nameOverride: ""
 
 # Replica count
 replicaCount: 1

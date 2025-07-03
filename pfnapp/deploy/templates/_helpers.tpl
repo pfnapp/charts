@@ -6,6 +6,15 @@ Expand the name of the chart.
 {{- end }}
 
 {{/*
+The name of the application for Kubernetes standard labels.
+Uses app.name from values.yaml for app.kubernetes.io/name label.
+This ensures proper log aggregation and resource identification.
+*/}}
+{{- define "deploy.appName" -}}
+{{- .Values.app.name | trunc 63 | trimSuffix "-" }}
+{{- end }}
+
+{{/*
 Create a default fully qualified app name.
 We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
 If release name contains chart name it will be used as a full name.
@@ -46,7 +55,7 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 Selector labels
 */}}
 {{- define "deploy.selectorLabels" -}}
-app.kubernetes.io/name: {{ include "deploy.name" . }}
+app.kubernetes.io/name: {{ include "deploy.appName" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 

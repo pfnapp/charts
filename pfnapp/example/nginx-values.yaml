@@ -4,6 +4,7 @@
 deploy:
   # Application configuration
   app:
+    # This sets app.kubernetes.io/name label for proper log aggregation
     name: "nginx"
     version: "1.24"
 
