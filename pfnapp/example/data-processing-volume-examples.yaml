@@ -1,0 +1,449 @@
+# Data Processing Application Volume Mount Examples
+# Examples for batch jobs, ETL processes, and data analytics workloads
+
+app:
+  name: "data-processor"
+  version: "2.1.0"
+
+deploymentType: "deployment"
+replicaCount: 1
+
+image:
+  repository: "python"
+  tag: "3.11-slim"
+  pullPolicy: IfNotPresent
+  command: ["python"]
+  args: ["/app/main.py"]
+
+# ==============================================================================
+# DATA PROCESSING CONFIGURATION
+# ==============================================================================
+volumeConfigMaps:
+  enabled: true
+  items:
+    # ========================================
+    # ETL Pipeline Configuration
+    # ========================================
+    - name: "etl-config"
+      mountPath: "/app/config"
+      readOnly: true
+      defaultMode: 0644
+      data:
+        "pipeline.yaml": |
+          # ETL Pipeline Configuration
+          pipeline:
+            name: "customer-data-etl"
+            version: "2.1.0"
+            schedule: "0 2 * * *"  # Daily at 2 AM
+            timeout: 3600  # 1 hour timeout
+            
+          sources:
+            - name: "customer_db"
+              type: "postgresql"
+              connection_string_ref: "postgres-connection"
+              query: |
+                SELECT 
+                  customer_id,
+                  email,
+                  first_name,
+                  last_name,
+                  created_at,
+                  last_login_at,
+                  subscription_tier
+                FROM customers 
+                WHERE updated_at >= NOW() - INTERVAL '1 DAY'
+            
+            - name: "events_api"
+              type: "rest_api"
+              base_url: "https://api.analytics.com/v1"
+              auth_header_ref: "analytics-api-key"
+              endpoints:
+                - "/events/customer-interactions"
+                - "/events/purchases"
+            
+            - name: "file_uploads"
+              type: "s3"
+              bucket: "customer-data-uploads"
+              prefix: "daily-exports/"
+              format: "csv"
+          
+          transformations:
+            - name: "data_cleaning"
+              rules:
+                - remove_duplicates: ["customer_id", "email"]
+                - validate_email_format: true
+                - normalize_names: ["first_name", "last_name"]
+                - convert_timestamps: ["created_at", "last_login_at"]
+            
+            - name: "data_enrichment"
+              external_apis:
+                - name: "geo_lookup"
+                  url: "https://api.geocoding.com/v1/lookup"
+                  rate_limit: 100
+                - name: "company_data"
+                  url: "https://api.clearbit.com/v2/people/find"
+          
+          destinations:
+            - name: "analytics_warehouse"
+              type: "bigquery"
+              project: "analytics-prod"
+              dataset: "customer_data"
+              table: "customer_profiles"
+              write_mode: "append"
+            
+            - name: "ml_feature_store"
+              type: "redis"
+              connection_ref: "redis-ml-features"
+              key_pattern: "customer:{customer_id}:features"
+              ttl: 86400  # 24 hours
+
+        "logging.yaml": |
+          version: 1
+          disable_existing_loggers: false
+          
+          formatters:
+            detailed:
+              format: '%(asctime)s - %(name)s - %(levelname)s - %(funcName)s:%(lineno)d - %(message)s'
+            simple:
+              format: '%(levelname)s - %(message)s'
+          
+          handlers:
+            console:
+              class: logging.StreamHandler
+              level: INFO
+              formatter: simple
+              stream: ext://sys.stdout
+            
+            file:
+              class: logging.handlers.RotatingFileHandler
+              level: DEBUG
+              formatter: detailed
+              filename: /app/logs/etl.log
+              maxBytes: 10485760  # 10MB
+              backupCount: 5
+            
+            error_file:
+              class: logging.FileHandler
+              level: ERROR
+              formatter: detailed
+              filename: /app/logs/errors.log
+          
+          loggers:
+            etl:
+              level: DEBUG
+              handlers: [console, file]
+              propagate: false
+            
+            sqlalchemy:
+              level: WARNING
+              handlers: [console]
+              propagate: false
+          
+          root:
+            level: INFO
+            handlers: [console, error_file]
+
+    # ========================================
+    # Data Quality Rules
+    # ========================================
+    - name: "data-quality"
+      mountPath: "/app/quality"
+      readOnly: true
+      data:
+        "validation_rules.json": |
+          {
+            "customer_data": {
+              "required_fields": ["customer_id", "email", "created_at"],
+              "field_types": {
+                "customer_id": "integer",
+                "email": "email",
+                "first_name": "string",
+                "last_name": "string",
+                "created_at": "datetime",
+                "subscription_tier": "enum"
+              },
+              "constraints": {
+                "email": {
+                  "unique": true,
+                  "format": "email"
+                },
+                "customer_id": {
+                  "unique": true,
+                  "min_value": 1
+                },
+                "subscription_tier": {
+                  "allowed_values": ["free", "premium", "enterprise"]
+                }
+              },
+              "data_freshness": {
+                "max_age_hours": 25,
+                "alert_threshold_hours": 30
+              }
+            },
+            "event_data": {
+              "required_fields": ["event_id", "customer_id", "event_type", "timestamp"],
+              "anomaly_detection": {
+                "enabled": true,
+                "metrics": ["event_count_per_hour", "unique_customers_per_hour"],
+                "thresholds": {
+                  "event_count_deviation": 2.5,
+                  "customer_count_deviation": 2.0
+                }
+              }
+            }
+          }
+        
+        "data_profiling.yaml": |
+          profiling:
+            enabled: true
+            sample_size: 10000
+            output_format: "json"
+            
+          metrics:
+            numeric_fields:
+              - mean
+              - median
+              - std_dev
+              - min
+              - max
+              - percentiles: [25, 50, 75, 90, 95, 99]
+              - null_count
+              - unique_count
+            
+            string_fields:
+              - unique_count
+              - null_count
+              - min_length
+              - max_length
+              - avg_length
+              - pattern_analysis
+            
+            datetime_fields:
+              - min_date
+              - max_date
+              - date_range_days
+              - null_count
+              - timezone_distribution
+
+    # ========================================
+    # ML Model Configuration
+    # ========================================
+    - name: "ml-models"
+      mountPath: "/app/models/config"
+      readOnly: true
+      data:
+        "customer_segmentation.yaml": |
+          model:
+            name: "customer_segmentation_v2"
+            type: "kmeans"
+            framework: "scikit-learn"
+            version: "2.1.0"
+            
+          features:
+            - name: "total_spent"
+              type: "numeric"
+              transformation: "log_scale"
+            - name: "days_since_last_purchase"
+              type: "numeric"
+              transformation: "standardize"
+            - name: "purchase_frequency"
+              type: "numeric"
+              transformation: "standardize"
+            - name: "avg_order_value"
+              type: "numeric"
+              transformation: "log_scale"
+            - name: "subscription_tier"
+              type: "categorical"
+              encoding: "one_hot"
+          
+          hyperparameters:
+            n_clusters: 5
+            init: "k-means++"
+            n_init: 10
+            max_iter: 300
+            random_state: 42
+          
+          validation:
+            method: "silhouette_score"
+            min_score: 0.3
+            cross_validation_folds: 5
+          
+          output:
+            cluster_labels: ["high_value", "regular", "occasional", "new", "at_risk"]
+            feature_store_update: true
+            batch_prediction_schedule: "0 4 * * *"
+
+        "churn_prediction.yaml": |
+          model:
+            name: "churn_prediction_v1"
+            type: "random_forest"
+            framework: "scikit-learn"
+            
+          features:
+            behavioral:
+              - login_frequency_30d
+              - feature_usage_score
+              - support_tickets_count
+              - days_since_last_activity
+            
+            transactional:
+              - total_spent_90d
+              - purchase_frequency_90d
+              - refund_count_90d
+              - subscription_changes_count
+            
+            demographic:
+              - account_age_days
+              - subscription_tier
+              - user_source
+          
+          target:
+            variable: "churned_30d"
+            definition: "No activity for 30+ days"
+          
+          training:
+            test_size: 0.2
+            validation_size: 0.2
+            stratify: true
+            class_weight: "balanced"
+          
+          performance_thresholds:
+            min_precision: 0.75
+            min_recall: 0.65
+            min_f1_score: 0.70
+
+# ==============================================================================
+# DATA PROCESSING SECRETS
+# ==============================================================================
+volumeSecrets:
+  enabled: true
+  items:
+    # ========================================
+    # Database Connections
+    # ========================================
+    - name: "database-connections"
+      mountPath: "/app/secrets/databases"
+      readOnly: true
+      defaultMode: 0400
+      stringData:
+        "postgres-connection": "postgresql://etl_user:etl_password_2024@postgres-prod:5432/analytics"
+        "postgres-readonly": "postgresql://readonly_user:readonly_pass@postgres-replica:5432/analytics"
+        "bigquery-credentials": |
+          {
+            "type": "service_account",
+            "project_id": "analytics-prod",
+            "private_key_id": "key123",
+            "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvg...\n-----END PRIVATE KEY-----\n",
+            "client_email": "etl-service@analytics-prod.iam.gserviceaccount.com",
+            "client_id": "123456789012345678901",
+            "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+            "token_uri": "https://oauth2.googleapis.com/token"
+          }
+        "redis-ml-features": "redis://:redis_password_2024@redis-ml:6379/0"
+
+    # ========================================
+    # API Keys for External Services
+    # ========================================
+    - name: "external-apis"
+      mountPath: "/app/secrets/apis"
+      readOnly: true
+      defaultMode: 0400
+      stringData:
+        "analytics-api-key": "Bearer analytics_api_token_12345"
+        "clearbit-api-key": "sk_clearbit_api_key_67890"
+        "geocoding-api-key": "geocoding_service_key_abcdef"
+        "aws-access-key": "AKIAIOSFODNN7EXAMPLE"
+        "aws-secret-key": "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
+        "stripe-webhook-secret": "whsec_stripe_webhook_secret_123"
+
+    # ========================================
+    # ML Model Artifacts Access
+    # ========================================
+    - name: "ml-artifacts"
+      mountPath: "/app/secrets/ml"
+      readOnly: true
+      defaultMode: 0400
+      stringData:
+        "mlflow-token": "mlflow_tracking_token_2024"
+        "model-registry-key": "model_registry_access_key"
+        "feature-store-token": "feature_store_access_token"
+        "wandb-api-key": "wandb_project_api_key_xyz789"
+
+    # ========================================
+    # Message Queue Credentials
+    # ========================================
+    - name: "messaging"
+      mountPath: "/app/secrets/messaging"
+      readOnly: true
+      defaultMode: 0400
+      stringData:
+        "rabbitmq-connection": "amqp://etl_user:etl_password@rabbitmq:5672/etl"
+        "kafka-config": |
+          bootstrap.servers=kafka-cluster:9092
+          security.protocol=SASL_SSL
+          sasl.mechanisms=PLAIN
+          sasl.username=etl_consumer
+          sasl.password=kafka_password_2024
+          group.id=etl-pipeline-group
+        "pubsub-credentials": |
+          {
+            "type": "service_account",
+            "project_id": "messaging-prod",
+            "private_key_id": "pubsub_key_123",
+            "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvg...\n-----END PRIVATE KEY-----\n",
+            "client_email": "pubsub-etl@messaging-prod.iam.gserviceaccount.com"
+          }
+
+# Service configuration (for monitoring/health checks)
+service:
+  enabled: true
+  type: ClusterIP
+  port: 8080
+  targetPort: 8080
+
+# Container ports (for health checks and metrics)
+containerPorts:
+  - containerPort: 8080
+    name: http
+
+# Health checks
+simpleLivenessProbe:
+  httpGet:
+    path: "/health"
+    port: "http"
+
+simpleReadinessProbe:
+  httpGet:
+    path: "/ready"
+    port: "http"
+
+# Environment variables for the application
+env:
+  - name: "ENVIRONMENT"
+    value: "production"
+  - name: "LOG_LEVEL"
+    value: "INFO"
+  - name: "PYTHONPATH"
+    value: "/app"
+  - name: "CONFIG_PATH"
+    value: "/app/config"
+  - name: "SECRETS_PATH"
+    value: "/app/secrets"
+
+# Resources for data processing workload
+resources:
+  limits:
+    cpu: 2000m
+    memory: 4Gi
+  requests:
+    cpu: 1000m
+    memory: 2Gi
+
+# Storage for temporary files and logs
+simpleStorage:
+  - path: "/app/logs"
+    size: "5Gi"
+    class: "standard"
+  - path: "/app/temp"
+    size: "20Gi"
+    class: "fast-ssd"

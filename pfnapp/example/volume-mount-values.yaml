@@ -1,0 +1,138 @@
+# Example values demonstrating volume mount features for ConfigMaps and Secrets
+# This file shows how to use the new volumeConfigMaps and volumeSecrets features
+
+# Application configuration
+app:
+  name: "volume-demo-app"
+  version: "1.0.0"
+
+# Basic image configuration
+image:
+  repository: "nginx"
+  tag: "latest"
+  pullPolicy: IfNotPresent
+
+# Service configuration
+service:
+  enabled: true
+  type: ClusterIP
+  port: 80
+  targetPort: 80
+
+# ==============================================================================
+# Volume Mount Examples
+# ==============================================================================
+
+# Example 1: Mount a ConfigMap as a directory with multiple files
+volumeConfigMaps:
+  enabled: true
+  items:
+    - name: "app-config"
+      mountPath: "/etc/config"
+      readOnly: true
+      defaultMode: 0644
+      data:
+        "nginx.conf": |
+          server {
+              listen 80;
+              server_name localhost;
+              location / {
+                  root /usr/share/nginx/html;
+                  index index.html index.htm;
+              }
+          }
+        "app-config.yaml": |
+          app:
+            name: volume-demo-app
+            debug: true
+            features:
+              feature_a: true
+              feature_b: false
+        "feature-flags.txt": |
+          ENABLE_CACHING=true
+          ENABLE_LOGGING=true
+          MAX_CONNECTIONS=100
+
+    # Example 2: Mount a single file from a ConfigMap
+    - name: "single-config"
+      mountPath: "/app/config/database.yaml"
+      subPath: "database.yaml"
+      readOnly: true
+      data:
+        "database.yaml": |
+          database:
+            host: localhost
+            port: 5432
+            name: myapp
+        "other-config.yaml": |
+          # This file won't be mounted due to subPath
+          other: value
+
+    # Example 3: Use an existing ConfigMap
+    - name: "external-config"
+      mountPath: "/etc/external"
+      existingConfigMap: "my-existing-configmap"
+      readOnly: true
+
+# Example 4: Mount secrets as volumes
+volumeSecrets:
+  enabled: true
+  items:
+    - name: "app-secrets"
+      mountPath: "/etc/secrets"
+      readOnly: true
+      defaultMode: 0400
+      stringData:
+        "database-password": "super-secret-password"
+        "api-key": "secret-api-key-12345"
+        "jwt-secret": "my-jwt-signing-secret"
+
+    # Example 5: Mount a single secret file
+    - name: "tls-cert"
+      mountPath: "/etc/ssl/certs/tls.crt"
+      subPath: "tls.crt"
+      readOnly: true
+      stringData:
+        "tls.crt": |
+          -----BEGIN CERTIFICATE-----
+          MIIDXTCCAkWgAwIBAgIJAKoK/heBjcOuMA0GCSqGSIb3DQEBBQUAMEUxCzAJBgNV
+          BAYTAkFVMRMwEQYDVQQIDApTb21lLVN0YXRlMSEwHwYDVQQKDBhJbnRlcm5ldCBX
+          aWRnaXRzIFB0eSBMdGQwHhcNMTcwODI3MjM1NDA3WhcNMTgwODI3MjM1NDA3WjBF
+          -----END CERTIFICATE-----
+        "tls.key": |
+          -----BEGIN PRIVATE KEY-----
+          MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQC5T7QU6Q5/1hN5
+          PcPKQ9JMqTkJyGN7wTZfN3t1HfV6hGYRFuL9v4V8tL4DGq4o8yJ9wNnGxJpPHuL2
+          -----END PRIVATE KEY-----
+
+    # Example 6: Use an existing Secret
+    - name: "external-secret"
+      mountPath: "/var/secrets/external"
+      existingSecret: "my-existing-secret"
+      readOnly: true
+
+# Container ports
+containerPorts:
+  - containerPort: 80
+    name: http
+
+# Health checks
+simpleLivenessProbe:
+  httpGet:
+    path: "/"
+    port: "http"
+
+simpleReadinessProbe:
+  httpGet:
+    path: "/"
+    port: "http"
+
+# Example ingress (optional)
+simpleIngress:
+  - enabled: true
+    domain: "volume-demo.example.com"
+    className: "nginx"
+    tls: true
+    certManager:
+      enabled: true
+      issuer: "letsencrypt-prod"

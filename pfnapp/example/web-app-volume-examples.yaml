@@ -1,0 +1,406 @@
+# Web Application Volume Mount Examples
+# Examples for frontend applications, static sites, and web servers
+
+app:
+  name: "webapp-frontend"
+  version: "3.1.0"
+
+deploymentType: "deployment"
+replicaCount: 2
+
+image:
+  repository: "nginx"
+  tag: "1.25-alpine"
+  pullPolicy: IfNotPresent
+
+# ==============================================================================
+# WEB APPLICATION CONFIGURATION
+# ==============================================================================
+volumeConfigMaps:
+  enabled: true
+  items:
+    # ========================================
+    # Nginx Main Configuration
+    # ========================================
+    - name: "nginx-main-config"
+      mountPath: "/etc/nginx/nginx.conf"
+      subPath: "nginx.conf"
+      readOnly: true
+      defaultMode: 0644
+      data:
+        "nginx.conf": |
+          user nginx;
+          worker_processes auto;
+          error_log /var/log/nginx/error.log warn;
+          pid /var/run/nginx.pid;
+          
+          events {
+              worker_connections 1024;
+              use epoll;
+              multi_accept on;
+          }
+          
+          http {
+              include /etc/nginx/mime.types;
+              default_type application/octet-stream;
+              
+              # Logging format
+              log_format main '$remote_addr - $remote_user [$time_local] "$request" '
+                              '$status $body_bytes_sent "$http_referer" '
+                              '"$http_user_agent" "$http_x_forwarded_for" '
+                              'rt=$request_time uct="$upstream_connect_time" '
+                              'uht="$upstream_header_time" urt="$upstream_response_time"';
+              
+              access_log /var/log/nginx/access.log main;
+              
+              # Performance settings
+              sendfile on;
+              tcp_nopush on;
+              tcp_nodelay on;
+              keepalive_timeout 65;
+              types_hash_max_size 2048;
+              client_max_body_size 10M;
+              
+              # Gzip compression
+              gzip on;
+              gzip_vary on;
+              gzip_min_length 1024;
+              gzip_proxied any;
+              gzip_comp_level 6;
+              gzip_types
+                  text/plain
+                  text/css
+                  text/xml
+                  text/javascript
+                  application/javascript
+                  application/xml+rss
+                  application/json;
+              
+              # Security headers
+              add_header X-Frame-Options "SAMEORIGIN" always;
+              add_header X-XSS-Protection "1; mode=block" always;
+              add_header X-Content-Type-Options "nosniff" always;
+              add_header Referrer-Policy "no-referrer-when-downgrade" always;
+              add_header Content-Security-Policy "default-src 'self' http: https: data: blob: 'unsafe-inline'" always;
+              
+              # Rate limiting
+              limit_req_zone $binary_remote_addr zone=api:10m rate=10r/s;
+              limit_req_zone $binary_remote_addr zone=static:10m rate=30r/s;
+              
+              # Include server configurations
+              include /etc/nginx/conf.d/*.conf;
+          }
+
+    # ========================================
+    # Server Configuration for SPA
+    # ========================================
+    - name: "spa-server-config"
+      mountPath: "/etc/nginx/conf.d"
+      readOnly: true
+      defaultMode: 0644
+      data:
+        "default.conf": |
+          server {
+              listen 80;
+              server_name _;
+              root /usr/share/nginx/html;
+              index index.html;
+              
+              # Security headers for this server
+              add_header X-Frame-Options "DENY" always;
+              add_header X-Content-Type-Options "nosniff" always;
+              add_header X-XSS-Protection "1; mode=block" always;
+              
+              # Handle SPA routing - all routes serve index.html
+              location / {
+                  try_files $uri $uri/ /index.html;
+                  
+                  # Cache static assets
+                  location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
+                      expires 1y;
+                      add_header Cache-Control "public, immutable";
+                      access_log off;
+                  }
+              }
+              
+              # API proxy to backend
+              location /api/ {
+                  limit_req zone=api burst=20 nodelay;
+                  
+                  proxy_pass http://backend-service:8080;
+                  proxy_set_header Host $host;
+                  proxy_set_header X-Real-IP $remote_addr;
+                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                  proxy_set_header X-Forwarded-Proto $scheme;
+                  
+                  # CORS headers
+                  add_header Access-Control-Allow-Origin *;
+                  add_header Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS";
+                  add_header Access-Control-Allow-Headers "DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization";
+                  
+                  # Handle preflight requests
+                  if ($request_method = 'OPTIONS') {
+                      add_header Access-Control-Allow-Origin *;
+                      add_header Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS";
+                      add_header Access-Control-Allow-Headers "DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization";
+                      add_header Access-Control-Max-Age 1728000;
+                      add_header Content-Type 'text/plain; charset=utf-8';
+                      add_header Content-Length 0;
+                      return 204;
+                  }
+              }
+              
+              # Health check endpoint
+              location /health {
+                  access_log off;
+                  return 200 "healthy\n";
+                  add_header Content-Type text/plain;
+              }
+              
+              # Metrics endpoint for monitoring
+              location /nginx_status {
+                  stub_status on;
+                  access_log off;
+                  allow 10.0.0.0/8;
+                  allow 172.16.0.0/12;
+                  allow 192.168.0.0/16;
+                  deny all;
+              }
+              
+              # Security - deny access to hidden files
+              location ~ /\. {
+                  deny all;
+                  access_log off;
+                  log_not_found off;
+              }
+          }
+        
+        "upstream.conf": |
+          # Backend service upstream
+          upstream backend-service {
+              server backend-service:8080 max_fails=3 fail_timeout=30s;
+              server backend-service-backup:8080 backup;
+              keepalive 32;
+          }
+          
+          # Image service upstream
+          upstream image-service {
+              server image-service:8080;
+              keepalive 16;
+          }
+
+    # ========================================
+    # Application Environment Configuration
+    # ========================================
+    - name: "app-environment"
+      mountPath: "/usr/share/nginx/html/config"
+      readOnly: true
+      data:
+        "config.js": |
+          // Runtime configuration for frontend app
+          window.APP_CONFIG = {
+              API_BASE_URL: '/api/v1',
+              APP_NAME: 'My Web Application',
+              APP_VERSION: '3.1.0',
+              ENVIRONMENT: 'production',
+              FEATURES: {
+                  ANALYTICS: true,
+                  FEATURE_TOGGLES: true,
+                  USER_MANAGEMENT: true,
+                  REAL_TIME_NOTIFICATIONS: false
+              },
+              ANALYTICS: {
+                  GOOGLE_ANALYTICS_ID: 'GA-XXXXXXXXX',
+                  MIXPANEL_TOKEN: 'your-mixpanel-token'
+              },
+              EXTERNAL_SERVICES: {
+                  MAPS_API_KEY: 'your-maps-api-key',
+                  STRIPE_PUBLISHABLE_KEY: 'pk_live_...'
+              },
+              UI: {
+                  THEME: 'light',
+                  LANGUAGE: 'en',
+                  DATE_FORMAT: 'MM/DD/YYYY',
+                  PAGINATION_SIZE: 20
+              }
+          };
+        
+        "env.json": |
+          {
+            "production": {
+              "apiUrl": "https://api.myapp.com",
+              "cdnUrl": "https://cdn.myapp.com",
+              "debug": false,
+              "logLevel": "error"
+            },
+            "staging": {
+              "apiUrl": "https://api-staging.myapp.com",
+              "cdnUrl": "https://cdn-staging.myapp.com",
+              "debug": true,
+              "logLevel": "warn"
+            }
+          }
+
+    # ========================================
+    # Custom Error Pages
+    # ========================================
+    - name: "error-pages"
+      mountPath: "/usr/share/nginx/html/errors"
+      readOnly: true
+      data:
+        "404.html": |
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+              <meta charset="UTF-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <title>Page Not Found - My Web App</title>
+              <style>
+                  body { font-family: Arial, sans-serif; text-align: center; padding: 50px; }
+                  .error-container { max-width: 600px; margin: 0 auto; }
+                  h1 { color: #e74c3c; font-size: 4em; margin: 0; }
+                  h2 { color: #34495e; margin: 20px 0; }
+                  p { color: #7f8c8d; line-height: 1.6; }
+                  .btn { display: inline-block; padding: 12px 24px; background: #3498db; 
+                         color: white; text-decoration: none; border-radius: 4px; margin-top: 20px; }
+              </style>
+          </head>
+          <body>
+              <div class="error-container">
+                  <h1>404</h1>
+                  <h2>Page Not Found</h2>
+                  <p>The page you're looking for doesn't exist. It might have been moved, deleted, or you entered the wrong URL.</p>
+                  <a href="/" class="btn">Go Home</a>
+              </div>
+          </body>
+          </html>
+        
+        "50x.html": |
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+              <meta charset="UTF-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <title>Server Error - My Web App</title>
+              <style>
+                  body { font-family: Arial, sans-serif; text-align: center; padding: 50px; }
+                  .error-container { max-width: 600px; margin: 0 auto; }
+                  h1 { color: #e74c3c; font-size: 4em; margin: 0; }
+                  h2 { color: #34495e; margin: 20px 0; }
+                  p { color: #7f8c8d; line-height: 1.6; }
+              </style>
+          </head>
+          <body>
+              <div class="error-container">
+                  <h1>500</h1>
+                  <h2>Internal Server Error</h2>
+                  <p>Something went wrong on our end. We're working to fix it. Please try again later.</p>
+              </div>
+          </body>
+          </html>
+
+# ==============================================================================
+# WEB APPLICATION SECRETS
+# ==============================================================================
+volumeSecrets:
+  enabled: true
+  items:
+    # ========================================
+    # SSL/TLS Certificates
+    # ========================================
+    - name: "ssl-certificates"
+      mountPath: "/etc/ssl/certs"
+      readOnly: true
+      defaultMode: 0444
+      stringData:
+        "webapp.crt": |
+          -----BEGIN CERTIFICATE-----
+          MIIDXTCCAkWgAwIBAgIJAKoK/heBjcOuMA0GCSqGSIb3DQEBBQUAMEUxCzAJBgNV
+          BAYTAkFVMRMwEQYDVQQIDApTb21lLVN0YXRlMSEwHwYDVQQKDBhJbnRlcm5ldCBX
+          aWRnaXRzIFB0eSBMdGQwHhcNMTcwODI3MjM1NDA3WhcNMTgwODI3MjM1NDA3WjBF
+          -----END CERTIFICATE-----
+        "webapp.key": |
+          -----BEGIN PRIVATE KEY-----
+          MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQC5T7QU6Q5/1hN5
+          PcPKQ9JMqTkJyGN7wTZfN3t1HfV6hGYRFuL9v4V8tL4DGq4o8yJ9wNnGxJpPHuL2
+          -----END PRIVATE KEY-----
+        "ca-bundle.crt": |
+          -----BEGIN CERTIFICATE-----
+          MIIDXTCCAkWgAwIBAgIJAKoK/heBjcOuMA0GCSqGSIb3DQEBBQUAMEUxCzAJBgNV
+          BAYTAkFVMRMwEQYDVQQIDApTb21lLVN0YXRlMSEwHwYDVQQKDBhJbnRlcm5ldCBX
+          aWRnaXRzIFB0eSBMdGQwHhcNMTcwODI3MjM1NDA3WhcNMTgwODI3MjM1NDA3WjBF
+          -----END CERTIFICATE-----
+
+    # ========================================
+    # Authentication Keys
+    # ========================================
+    - name: "auth-keys"
+      mountPath: "/var/secrets/auth"
+      readOnly: true
+      defaultMode: 0400
+      stringData:
+        "jwt-public-key": |
+          -----BEGIN PUBLIC KEY-----
+          MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAu1SU1LfVLPHCozMxH2Mo
+          4lgOEePzNm0tRgeLezV6ffAt0gunVBfLfWoFRJ2c9lztEjxNhlNrg6wUnrF0VpYJ
+          DzOujt5tnVGbvfSJZJP8ZG8ZqT1lUmtHklzVjbkqDjW7g3kpgf9k2L2mXrN+gqr=
+          -----END PUBLIC KEY-----
+        "session-secret": "ultra-secret-session-key-for-webapp-2024"
+        "csrf-token": "csrf-protection-secret-key-2024"
+
+    # ========================================
+    # Basic Auth for Admin Areas
+    # ========================================
+    - name: "basic-auth"
+      mountPath: "/etc/nginx/auth/.htpasswd"
+      subPath: ".htpasswd"
+      readOnly: true
+      defaultMode: 0400
+      stringData:
+        ".htpasswd": |
+          # Generated with: htpasswd -c .htpasswd admin
+          admin:$apr1$ruca84Hq$HopvoQp4do/ttZCuZIHV4/
+          support:$apr1$ZjTqzBx7$VQnhYJ8zRJKEf8qGS1jY4.
+          monitor:$apr1$uyR8jKcF$VQnhYJ8zRJKEf8qGS1jY4.
+
+# Service configuration
+service:
+  enabled: true
+  type: ClusterIP
+  port: 80
+  targetPort: 80
+
+# Container ports
+containerPorts:
+  - containerPort: 80
+    name: http
+
+# Health checks
+simpleLivenessProbe:
+  httpGet:
+    path: "/health"
+    port: "http"
+
+simpleReadinessProbe:
+  httpGet:
+    path: "/health"
+    port: "http"
+
+# Resources
+resources:
+  limits:
+    cpu: 200m
+    memory: 256Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+# Ingress for external access
+simpleIngress:
+  - enabled: true
+    domain: "webapp.example.com"
+    className: "nginx"
+    tls: true
+    certManager:
+      enabled: true
+      issuer: "letsencrypt-prod"

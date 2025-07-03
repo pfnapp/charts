@@ -447,3 +447,60 @@ simpleStorage: []
   #   class: "ultra-fast"
   #   name: "application-data"        # Custom name instead of auto-generated
   #   accessModes: ["ReadWriteOnce"]  # Override default
+
+# ==============================================================================
+# Volume Mounts for ConfigMaps and Secrets
+# ==============================================================================
+volumeConfigMaps:
+  # -- Enable mounting ConfigMaps as volumes
+  enabled: false
+  # -- List of ConfigMaps to mount as volumes
+  items: []
+    # Example:
+    # - name: "app-config-volume"
+    #   # -- The path inside the container where the volume should be mounted
+    #   mountPath: "/etc/config"
+    #   # -- (Optional) Use an existing ConfigMap instead of creating one
+    #   # If provided, the 'data' field will be ignored
+    #   existingConfigMap: ""
+    #   # -- (Optional) The data for the ConfigMap to be created
+    #   # Keys become filenames and values become file content
+    #   data:
+    #     "config.yaml": |
+    #       app:
+    #         name: myapp
+    #         debug: true
+    #     "feature-flags.txt": "ENABLE_FEATURE_X=true"
+    #   # -- (Optional) Specify the file mode bits for the mounted files
+    #   defaultMode: 0644
+    #   # -- (Optional) Mount a specific key from the ConfigMap as a single file
+    #   # The value of subPath should be a key from the 'data' map
+    #   subPath: "" # e.g., "config.yaml"
+    #   # -- (Optional) Mount the volume as read-only
+    #   readOnly: true
+
+volumeSecrets:
+  # -- Enable mounting Secrets as volumes
+  enabled: false
+  # -- List of Secrets to mount as volumes
+  items: []
+    # Example:
+    # - name: "app-secrets-volume"
+    #   # -- The path inside the container where the volume should be mounted
+    #   mountPath: "/etc/secrets"
+    #   # -- (Optional) Use an existing Secret instead of creating one
+    #   # If provided, the 'stringData' field will be ignored
+    #   existingSecret: ""
+    #   # -- (Optional) The data for the Secret to be created
+    #   # Use stringData for plain text values
+    #   stringData:
+    #     "username": "admin"
+    #     "password": "changeme"
+    #     "api-key": "secret-api-key-here"
+    #   # -- (Optional) Specify the file mode bits for the mounted files
+    #   defaultMode: 0400
+    #   # -- (Optional) Mount a specific key from the Secret as a single file
+    #   # The value of subPath should be a key from the 'stringData' map
+    #   subPath: "" # e.g., "username"
+    #   # -- (Optional) Mount the volume as read-only (recommended for secrets)
+    #   readOnly: true

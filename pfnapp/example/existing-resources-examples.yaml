@@ -1,0 +1,265 @@
+# Existing Resources Volume Mount Examples
+# Examples for mounting existing ConfigMaps and Secrets (not created by Helm)
+
+app:
+  name: "app-with-existing-resources"
+  version: "1.0.0"
+
+deploymentType: "deployment"
+replicaCount: 1
+
+image:
+  repository: "alpine"
+  tag: "3.18"
+  pullPolicy: IfNotPresent
+  command: ["sh"]
+  args: ["-c", "while true; do sleep 3600; done"]
+
+# ==============================================================================
+# EXISTING CONFIGMAPS - NO DATA FIELD, ONLY REFERENCES
+# ==============================================================================
+volumeConfigMaps:
+  enabled: true
+  items:
+    # ========================================
+    # Reference to ConfigMap created by another Helm chart
+    # ========================================
+    - name: "shared-app-config"
+      mountPath: "/etc/shared-config"
+      existingConfigMap: "shared-app-config"  # Created by another chart
+      readOnly: true
+      defaultMode: 0644
+
+    # ========================================
+    # Reference to ConfigMap created by external system (GitOps, etc.)
+    # ========================================
+    - name: "gitops-config"
+      mountPath: "/etc/gitops"
+      existingConfigMap: "app-config-from-argocd"  # Created by ArgoCD
+      readOnly: true
+
+    # ========================================
+    # Reference to cluster-wide configuration
+    # ========================================
+    - name: "cluster-config"
+      mountPath: "/etc/cluster"
+      existingConfigMap: "cluster-wide-config"  # Created by cluster admin
+      readOnly: true
+      defaultMode: 0755
+
+    # ========================================
+    # Single file from existing ConfigMap
+    # ========================================
+    - name: "ca-certificates"
+      mountPath: "/etc/ssl/certs/ca-certificates.crt"
+      subPath: "ca-certificates.crt"  # Mount only this file from the ConfigMap
+      existingConfigMap: "ca-cert-bundle"  # Created by cert-manager
+      readOnly: true
+      defaultMode: 0444
+
+    # ========================================
+    # Config created by Kubernetes operator
+    # ========================================
+    - name: "prometheus-config"
+      mountPath: "/etc/prometheus"
+      existingConfigMap: "prometheus-server-config"  # Created by Prometheus operator
+      readOnly: true
+
+    # ========================================
+    # Feature flags from external config management
+    # ========================================
+    - name: "feature-flags"
+      mountPath: "/app/feature-flags.json"
+      subPath: "feature-flags.json"
+      existingConfigMap: "feature-flags-config"  # Created by feature flag service
+      readOnly: true
+
+    # ========================================
+    # Database configuration from DBA team
+    # ========================================
+    - name: "database-config"
+      mountPath: "/etc/database"
+      existingConfigMap: "database-connection-config"  # Created by DBA team
+      readOnly: true
+      defaultMode: 0640
+
+    # ========================================
+    # Service mesh configuration
+    # ========================================
+    - name: "istio-config"
+      mountPath: "/etc/istio"
+      existingConfigMap: "istio-ca-root-cert"  # Created by Istio
+      readOnly: true
+
+# ==============================================================================
+# EXISTING SECRETS - NO STRINGDATA FIELD, ONLY REFERENCES
+# ==============================================================================
+volumeSecrets:
+  enabled: true
+  items:
+    # ========================================
+    # Secret created by external secret operator (ESO)
+    # ========================================
+    - name: "vault-secrets"
+      mountPath: "/var/secrets/vault"
+      existingSecret: "vault-injected-secrets"  # Created by External Secrets Operator
+      readOnly: true
+      defaultMode: 0400
+
+    # ========================================
+    # TLS certificate from cert-manager
+    # ========================================
+    - name: "tls-cert"
+      mountPath: "/etc/tls"
+      existingSecret: "app-tls-cert"  # Created by cert-manager
+      readOnly: true
+      defaultMode: 0444
+
+    # ========================================
+    # Single certificate file from cert-manager secret
+    # ========================================
+    - name: "server-cert"
+      mountPath: "/etc/ssl/certs/server.crt"
+      subPath: "tls.crt"  # Mount only the certificate, not the key
+      existingSecret: "server-tls-secret"  # Created by cert-manager
+      readOnly: true
+      defaultMode: 0444
+
+    # ========================================
+    # Database credentials from secret management system
+    # ========================================
+    - name: "database-creds"
+      mountPath: "/var/secrets/database"
+      existingSecret: "postgres-credentials"  # Created by database operator
+      readOnly: true
+      defaultMode: 0400
+
+    # ========================================
+    # API keys from external secret management
+    # ========================================
+    - name: "api-keys"
+      mountPath: "/var/secrets/apis"
+      existingSecret: "external-api-keys"  # Created by secret management system
+      readOnly: true
+      defaultMode: 0400
+
+    # ========================================
+    # SSH keys for Git access (created by CI/CD system)
+    # ========================================
+    - name: "git-ssh-key"
+      mountPath: "/home/app/.ssh/id_rsa"
+      subPath: "ssh-privatekey"  # Standard key name in SSH secrets
+      existingSecret: "git-ssh-secret"  # Created by CI/CD system
+      readOnly: true
+      defaultMode: 0600
+
+    # ========================================
+    # Docker registry credentials (created by CI/CD)
+    # ========================================
+    - name: "docker-config"
+      mountPath: "/home/app/.docker/config.json"
+      subPath: ".dockerconfigjson"  # Standard Docker config key
+      existingSecret: "docker-registry-secret"  # Created by CI/CD system
+      readOnly: true
+      defaultMode: 0600
+
+    # ========================================
+    # Service account token (created by Kubernetes)
+    # ========================================
+    - name: "service-account-token"
+      mountPath: "/var/run/secrets/kubernetes.io/serviceaccount"
+      existingSecret: "app-service-account-token"  # Created by Kubernetes
+      readOnly: true
+
+    # ========================================
+    # Webhook secrets (created by external webhook service)
+    # ========================================
+    - name: "webhook-secrets"
+      mountPath: "/var/secrets/webhooks"
+      existingSecret: "webhook-credentials"  # Created by webhook service
+      readOnly: true
+      defaultMode: 0400
+
+    # ========================================
+    # License keys (created by license management system)
+    # ========================================
+    - name: "license-key"
+      mountPath: "/app/license.key"
+      subPath: "license.key"
+      existingSecret: "software-license"  # Created by license management
+      readOnly: true
+      defaultMode: 0400
+
+    # ========================================
+    # Monitoring credentials (created by monitoring team)
+    # ========================================
+    - name: "monitoring-creds"
+      mountPath: "/var/secrets/monitoring"
+      existingSecret: "monitoring-credentials"  # Created by monitoring team
+      readOnly: true
+      defaultMode: 0440
+
+    # ========================================
+    # Cloud provider credentials (created by cloud operator)
+    # ========================================
+    - name: "cloud-credentials"
+      mountPath: "/var/secrets/cloud"
+      existingSecret: "cloud-provider-credentials"  # Created by cloud operator
+      readOnly: true
+      defaultMode: 0400
+
+# Service configuration
+service:
+  enabled: true
+  type: ClusterIP
+  port: 8080
+  targetPort: 8080
+
+# Container ports
+containerPorts:
+  - containerPort: 8080
+    name: http
+
+# Health checks
+simpleLivenessProbe:
+  httpGet:
+    path: "/health"
+    port: "http"
+
+simpleReadinessProbe:
+  httpGet:
+    path: "/ready"
+    port: "http"
+
+# Environment variables that reference the mounted secrets
+env:
+  # Reference to database credentials mounted as files
+  - name: "DATABASE_HOST"
+    value: "postgres.example.com"
+  - name: "DATABASE_CREDENTIALS_PATH"
+    value: "/var/secrets/database"
+  
+  # Reference to API keys directory
+  - name: "API_KEYS_PATH"
+    value: "/var/secrets/apis"
+  
+  # Reference to config directories
+  - name: "SHARED_CONFIG_PATH"
+    value: "/etc/shared-config"
+  - name: "CLUSTER_CONFIG_PATH"
+    value: "/etc/cluster"
+
+# Annotations to document the external dependencies
+podAnnotations:
+  dependencies.example.com/configmaps: "shared-app-config,app-config-from-argocd,cluster-wide-config,ca-cert-bundle,prometheus-server-config,feature-flags-config,database-connection-config,istio-ca-root-cert"
+  dependencies.example.com/secrets: "vault-injected-secrets,app-tls-cert,server-tls-secret,postgres-credentials,external-api-keys,git-ssh-secret,docker-registry-secret,app-service-account-token,webhook-credentials,software-license,monitoring-credentials,cloud-provider-credentials"
+  dependencies.example.com/external-systems: "vault,cert-manager,argocd,prometheus-operator,external-secrets-operator,istio"
+
+# Resources
+resources:
+  limits:
+    cpu: 100m
+    memory: 128Mi
+  requests:
+    cpu: 50m
+    memory: 64Mi

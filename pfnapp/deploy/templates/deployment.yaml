@@ -150,7 +150,6 @@ spec:
                 {{- end }}
               {{- end }}
             {{- end }}
-            {{- end }}
           {{- end }}
           {{- if or .Values.configMap.enabled .Values.secret.enabled .Values.envFrom }}
           envFrom:
@@ -177,7 +176,8 @@ spec:
                 {{- end }}
             {{- end }}
           {{- end }}
-          {{- if or .Values.volumeMounts .Values.simpleMounts .Values.simpleVolumes .Values.simpleStorage }}
+          {{- end }}
+          {{- if or .Values.volumeMounts .Values.simpleMounts .Values.simpleVolumes .Values.simpleStorage .Values.volumeConfigMaps.enabled .Values.volumeSecrets.enabled }}
           volumeMounts:
             {{- with .Values.volumeMounts }}
             {{- toYaml . | nindent 12 }}
@@ -195,8 +195,9 @@ spec:
             - name: {{ $storage.name | default ($cleanPath | default "root") }}
               mountPath: {{ $storage.path }}
             {{- end }}
+            {{- include "deploy.volumeMounts.mounts" . | nindent 12 }}
           {{- end }}
-      {{- if or .Values.volumes .Values.simpleMounts .Values.simpleVolumes .Values.simpleStorage }}
+      {{- if or .Values.volumes .Values.simpleMounts .Values.simpleVolumes .Values.simpleStorage .Values.volumeConfigMaps.enabled .Values.volumeSecrets.enabled }}
       volumes:
         {{- with .Values.volumes }}
         {{- toYaml . | nindent 8 }}
@@ -214,14 +215,15 @@ spec:
         {{- range $index, $volume := .Values.simpleVolumes }}
         - name: {{ $volume.name | default (printf "simple-volume-%d" $index) }}
           persistentVolumeClaim:
-            claimName: {{ include "common.fullname" $ }}-{{ $volume.name | default (printf "simple-volume-%d" $index) }}
+            claimName: {{ include "deploy.fullname" $ }}-{{ $volume.name | default (printf "simple-volume-%d" $index) }}
         {{- end }}
         {{- range $storage := .Values.simpleStorage }}
         {{- $cleanPath := $storage.path | trimPrefix "/" | replace "/" "-" }}
         - name: {{ $storage.name | default ($cleanPath | default "root") }}
           persistentVolumeClaim:
-            claimName: {{ include "common.fullname" $ }}-{{ $storage.name | default ($cleanPath | default "root") }}
+            claimName: {{ include "deploy.fullname" $ }}-{{ $storage.name | default ($cleanPath | default "root") }}
         {{- end }}
+        {{- include "deploy.volumeMounts.volumes" . | nindent 8 }}
       {{- end }}
 {{- end }}
 {{- if or .Values.simpleVolumes .Values.simpleStorage }}
@@ -230,9 +232,9 @@ spec:
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: {{ include "common.fullname" $ }}-{{ $volume.name | default (printf "simple-volume-%d" $index) }}
+  name: {{ include "deploy.fullname" $ }}-{{ $volume.name | default (printf "simple-volume-%d" $index) }}
   labels:
-    {{- include "common.labels" $ | nindent 4 }}
+    {{- include "deploy.labels" $ | nindent 4 }}
 spec:
   accessModes:
     {{- range $volume.accessModes | default (list "ReadWriteOnce") }}
@@ -249,9 +251,9 @@ spec:
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: {{ include "common.fullname" $ }}-{{ $storage.name | default ($cleanPath | default "root") }}
+  name: {{ include "deploy.fullname" $ }}-{{ $storage.name | default ($cleanPath | default "root") }}
   labels:
-    {{- include "common.labels" $ | nindent 4 }}
+    {{- include "deploy.labels" $ | nindent 4 }}
 spec:
   accessModes:
     {{- range $storage.accessModes | default (list "ReadWriteMany") }}
@@ -264,3 +266,4 @@ spec:
 ---
 {{- end }}
 {{- end }}
+{{- include "deploy.volumeMounts.resources" . }}

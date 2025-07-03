@@ -1,0 +1,416 @@
+# Comprehensive Volume Mount Examples
+# This file demonstrates ALL possible configurations for volumeConfigMaps and volumeSecrets
+
+# Application configuration
+app:
+  name: "comprehensive-volume-demo"
+  version: "2.0.0"
+
+# Basic deployment settings
+deploymentType: "deployment"
+replicaCount: 1
+
+image:
+  repository: "nginx"
+  tag: "alpine"
+  pullPolicy: IfNotPresent
+
+service:
+  enabled: true
+  type: ClusterIP
+  port: 80
+  targetPort: 80
+
+# ==============================================================================
+# VOLUME CONFIGMAPS - ALL POSSIBLE CONFIGURATIONS
+# ==============================================================================
+volumeConfigMaps:
+  enabled: true
+  items:
+    # ========================================
+    # Example 1: Basic ConfigMap with multiple files (directory mount)
+    # ========================================
+    - name: "basic-app-config"
+      mountPath: "/etc/app-config"
+      # No readOnly specified - defaults to false
+      # No defaultMode specified - uses Kubernetes default (0644)
+      data:
+        "app.properties": |
+          # Application properties
+          app.name=comprehensive-demo
+          app.version=2.0.0
+          app.environment=production
+          
+          # Database settings
+          db.host=localhost
+          db.port=5432
+          db.name=myapp
+          
+          # Cache settings
+          cache.enabled=true
+          cache.ttl=3600
+        "logging.conf": |
+          [loggers]
+          keys=root,app
+          
+          [handlers]
+          keys=consoleHandler,fileHandler
+          
+          [formatters]
+          keys=simpleFormatter
+          
+          [logger_root]
+          level=INFO
+          handlers=consoleHandler
+          
+          [logger_app]
+          level=DEBUG
+          handlers=fileHandler
+          qualname=app
+        "features.json": |
+          {
+            "features": {
+              "feature_a": {
+                "enabled": true,
+                "rollout_percentage": 100
+              },
+              "feature_b": {
+                "enabled": false,
+                "rollout_percentage": 0
+              },
+              "beta_features": {
+                "enabled": true,
+                "allowed_users": ["admin", "beta-user"]
+              }
+            }
+          }
+
+    # ========================================
+    # Example 2: ConfigMap with custom file permissions and read-only
+    # ========================================
+    - name: "secure-config"
+      mountPath: "/etc/secure-config"
+      readOnly: true
+      defaultMode: 0600  # Read/write for owner only
+      data:
+        "sensitive-config.yaml": |
+          api:
+            rate_limits:
+              requests_per_minute: 1000
+              burst_size: 100
+            auth:
+              jwt_secret_ref: "jwt-secret-key"
+              session_timeout: 3600
+          monitoring:
+            enabled: true
+            endpoint: "/metrics"
+            scrape_interval: "30s"
+        "encryption.key": "base64-encoded-encryption-key-here"
+
+    # ========================================
+    # Example 3: Single file mount using subPath
+    # ========================================
+    - name: "nginx-config"
+      mountPath: "/etc/nginx/nginx.conf"
+      subPath: "nginx.conf"  # Only mount this specific file
+      readOnly: true
+      defaultMode: 0644
+      data:
+        "nginx.conf": |
+          user nginx;
+          worker_processes auto;
+          error_log /var/log/nginx/error.log notice;
+          pid /var/run/nginx.pid;
+          
+          events {
+              worker_connections 1024;
+          }
+          
+          http {
+              log_format main '$remote_addr - $remote_user [$time_local] "$request" '
+                              '$status $body_bytes_sent "$http_referer" '
+                              '"$http_user_agent" "$http_x_forwarded_for"';
+              
+              access_log /var/log/nginx/access.log main;
+              
+              sendfile on;
+              tcp_nopush on;
+              keepalive_timeout 65;
+              types_hash_max_size 4096;
+              
+              include /etc/nginx/mime.types;
+              default_type application/octet-stream;
+              
+              server {
+                  listen 80;
+                  server_name localhost;
+                  
+                  location / {
+                      root /usr/share/nginx/html;
+                      index index.html index.htm;
+                  }
+                  
+                  location /health {
+                      access_log off;
+                      return 200 "healthy\n";
+                      add_header Content-Type text/plain;
+                  }
+              }
+          }
+        "mime.types": |
+          # This file exists but won't be mounted due to subPath
+          types {
+              text/html                             html htm shtml;
+              text/css                              css;
+              application/javascript                js;
+          }
+
+    # ========================================
+    # Example 4: Using an existing ConfigMap (no data field)
+    # ========================================
+    - name: "external-app-config"
+      mountPath: "/etc/external-config"
+      existingConfigMap: "my-existing-app-config"
+      readOnly: true
+      defaultMode: 0755  # Executable permissions
+
+    # ========================================
+    # Example 5: Configuration for multiple microservices
+    # ========================================
+    - name: "microservices-config"
+      mountPath: "/etc/microservices"
+      readOnly: true
+      defaultMode: 0644
+      data:
+        "user-service.yaml": |
+          service:
+            name: user-service
+            port: 8001
+            database:
+              host: postgres-user
+              database: users
+              pool_size: 10
+            redis:
+              host: redis-user
+              port: 6379
+          auth:
+            jwt_issuer: "user-service"
+            token_expiry: "24h"
+        "order-service.yaml": |
+          service:
+            name: order-service
+            port: 8002
+            database:
+              host: postgres-order
+              database: orders
+              pool_size: 20
+            queue:
+              host: rabbitmq
+              queue: order-processing
+          payment:
+            provider: stripe
+            webhook_secret_ref: "stripe-webhook-secret"
+        "notification-service.yaml": |
+          service:
+            name: notification-service
+            port: 8003
+          providers:
+            email:
+              smtp_host: smtp.example.com
+              smtp_port: 587
+            sms:
+              provider: twilio
+              account_sid_ref: "twilio-sid"
+            push:
+              provider: firebase
+              key_ref: "firebase-key"
+
+# ==============================================================================
+# VOLUME SECRETS - ALL POSSIBLE CONFIGURATIONS
+# ==============================================================================
+volumeSecrets:
+  enabled: true
+  items:
+    # ========================================
+    # Example 1: Basic Secret with multiple sensitive files
+    # ========================================
+    - name: "database-credentials"
+      mountPath: "/var/secrets/database"
+      readOnly: true  # Always recommended for secrets
+      defaultMode: 0400  # Read-only for owner, very restrictive
+      stringData:
+        "username": "app_user"
+        "password": "super-secret-database-password-2024"
+        "admin-username": "admin"
+        "admin-password": "ultra-secret-admin-password"
+        "connection-string": "postgresql://app_user:super-secret-database-password-2024@postgres:5432/myapp?sslmode=require"
+
+    # ========================================
+    # Example 2: API Keys and tokens (different permissions)
+    # ========================================
+    - name: "api-credentials"
+      mountPath: "/var/secrets/api"
+      readOnly: true
+      defaultMode: 0440  # Read for owner and group
+      stringData:
+        "stripe-api-key": "sk_live_abcdef123456789..."
+        "aws-access-key": "AKIAIOSFODNN7EXAMPLE"
+        "aws-secret-key": "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
+        "jwt-signing-key": "your-256-bit-secret-key-here"
+        "webhook-secret": "whsec_1234567890abcdef"
+        "google-service-account": |
+          {
+            "type": "service_account",
+            "project_id": "my-project",
+            "private_key_id": "key-id",
+            "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvg...\n-----END PRIVATE KEY-----\n",
+            "client_email": "service@my-project.iam.gserviceaccount.com",
+            "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+            "token_uri": "https://oauth2.googleapis.com/token"
+          }
+
+    # ========================================
+    # Example 3: TLS Certificates (single file mount)
+    # ========================================
+    - name: "tls-certificate"
+      mountPath: "/etc/ssl/certs/tls.crt"
+      subPath: "tls.crt"  # Mount only the certificate file
+      readOnly: true
+      defaultMode: 0444  # Read-only for all (certificates are public)
+      stringData:
+        "tls.crt": |
+          -----BEGIN CERTIFICATE-----
+          MIIDXTCCAkWgAwIBAgIJAKoK/heBjcOuMA0GCSqGSIb3DQEBBQUAMEUxCzAJBgNV
+          BAYTAkFVMRMwEQYDVQQIDApTb21lLVN0YXRlMSEwHwYDVQQKDBhJbnRlcm5ldCBX
+          aWRnaXRzIFB0eSBMdGQwHhcNMTcwODI3MjM1NDA3WhcNMTgwODI3MjM1NDA3WjBF
+          MQswCQYDVQQGEwJBVTETMBEGA1UECAwKU29tZS1TdGF0ZTEhMB8GA1UECgwYSW50
+          ZXJuZXQgV2lkZ2l0cyBQdHkgTHRkMB4XDTE3MDgyNzIzNTQwN1oXDTE4MDgyNzIz
+          NTQwN1owRTELMAkGA1UEBhMCQVUxEzARBgNVBAgMClNvbWUtU3RhdGUxITAfBgNV
+          BAoMGEludGVybmV0IFdpZGdpdHMgUHR5IEx0ZDCCASIwDQYJKoZIhvcNAQEBBQAD
+          ggEPADCCAQoCggEBALlPtBTpDn/WE3k9w8pD0kypOQnIY3vBNl83e3Ud9XqEZhEW
+          4v2/hXy0vgMarijzIn3A2cbEmk8e4vYWoG7JvPqPw5R2sVlF7D3kGYRJu3lmhJ
+          -----END CERTIFICATE-----
+        "tls.key": |
+          -----BEGIN PRIVATE KEY-----
+          MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQC5T7QU6Q5/1hN5
+          PcPKQ9JMqTkJyGN7wTZfN3t1HfV6hGYRFuL9v4V8tL4DGq4o8yJ9wNnGxJpPHuL2
+          FqBuybz6j8OUdrFZRew95BmESbt5ZoSf4Wq0g7QJ5FkJ7qJfBJqH3m3jm2Ej
+          -----END PRIVATE KEY-----
+
+    # ========================================
+    # Example 4: Private key only (very restrictive permissions)
+    # ========================================
+    - name: "private-key"
+      mountPath: "/var/secrets/private/key.pem"
+      subPath: "key.pem"
+      readOnly: true
+      defaultMode: 0400  # Read-only for owner only
+      stringData:
+        "key.pem": |
+          -----BEGIN RSA PRIVATE KEY-----
+          MIIEpAIBAAKCAQEAu1SU1LfVLPHCozMxH2Mo4lgOEePzNm0tRgeLezV6ffAt0gun
+          VBfLfWoFRJ2c9lztEjxNhlNrg6wUnrF0VpYJDzOujt5tnVGbvfSJZJP8ZG8ZqT1l
+          UmtHklzVjbkqDjW7g3kpgf9k2L2mXrN+gqrD5BgjNqj5YrS3w2oU2Z5VyxY=
+          -----END RSA PRIVATE KEY-----
+        "public.pem": |
+          # This won't be mounted due to subPath
+          -----BEGIN PUBLIC KEY-----
+          MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAu1SU1LfVLPHCozMxH2Mo
+          4lgOEePzNm0tRgeLezV6ffAt0gunVBfLfWoFRJ2c9lztEjxNhlNrg6wUnrF0VpYJ
+          DzOujt5tnVGbvfSJZJP8ZG8ZqT1lUmtHklzVjbkqDjW7g3kpgf9k2L2mXrN+gqr=
+          -----END PUBLIC KEY-----
+
+    # ========================================
+    # Example 5: Using existing Secret (no stringData field)
+    # ========================================
+    - name: "external-vault-secrets"
+      mountPath: "/var/secrets/vault"
+      existingSecret: "vault-injected-secrets"
+      readOnly: true
+      # defaultMode not specified - uses Secret default
+
+    # ========================================
+    # Example 6: SSH keys for Git access
+    # ========================================
+    - name: "git-ssh-keys"
+      mountPath: "/home/app/.ssh"
+      readOnly: true
+      defaultMode: 0600  # SSH requires specific permissions
+      stringData:
+        "id_rsa": |
+          -----BEGIN OPENSSH PRIVATE KEY-----
+          b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABFwAAAAdzc2gtcn
+          NhAAAAAwEAAQAAAQEAu1SU1LfVLPHCozMxH2Mo4lgOEePzNm0tRgeLezV6ffAt0gun
+          VBfLfWoFRJ2c9lztEjxNhlNrg6wUnrF0VpYJDzOujt5tnVGbvfSJZJP8ZG8ZqT1l
+          UmtHklzVjbkqDjW7g3kpgf9k2L2mXrN+gqrD5BgjNqj5YrS3w2oU2Z5VyxY=
+          -----END OPENSSH PRIVATE KEY-----
+        "id_rsa.pub": "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDAu1SU1LfVLPHCozMxH2Mo4lgOEePzNm0tRgeLezV6ffAt0gun... user@example.com"
+        "known_hosts": |
+          github.com ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCj7ndNxQowgcQnjshcLrqPEiiphnt+VTTvDP6mHBL9j1aNUkY4Ue1gvwnGLVlOhGeYrnZaMgRK6+PKCUXaDbC7qtbW8gIkhL7aGCsOr/C56SJMy/BCZfxd1nWzAOxSDPgVsmerOBYfNqltV9/hWCqBywINIR+5dIg6JTJ72pcEpEjcYgXkE2YEFXV1JHnsKgbLWNlhScqb2UmyRkQyytRLtL+38TGxkxCflmO+5Z8CSSNY7GidjMIZ7Q4zMjA2n1nGrlTDkzwDCsw+wqFPGQA179cnfGWOWRVruj16z6XyvxvjJwbz0wQZ75XK5tKSb7FNyeIEs4TT4jk+S4dhPeAUC5y+bDYirYgM4GC7uEnztnZyaVWQ7B381AK4Qdrwt51ZqExKbQpTUNn+EjqoTwvqNj4kqx5QUCI0ThS/YkOxJCXmPUWZbhjpCg56i+2aB6CmK2JGhn57K5mj0MNdBXA4/WnwH6XoPWJzK5Nyu2zB3nAZp+S5hpQs+p1vN1/wsjk=
+          gitlab.com ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDQhv+QWLrDqYF+GgIREcGr+K4n8xEJqbLbQfKamlf2QjN+Rz4lbGn1k9FkGl6BO9K4QVvC5QZ6V+VQ=
+        "config": |
+          Host github.com
+              HostName github.com
+              User git
+              IdentityFile ~/.ssh/id_rsa
+              StrictHostKeyChecking yes
+          
+          Host gitlab.com
+              HostName gitlab.com
+              User git
+              IdentityFile ~/.ssh/id_rsa
+              StrictHostKeyChecking yes
+
+    # ========================================
+    # Example 7: Multiple environment secrets
+    # ========================================
+    - name: "environment-secrets"
+      mountPath: "/var/secrets/env"
+      readOnly: true
+      defaultMode: 0440
+      stringData:
+        "production.env": |
+          DATABASE_URL=postgresql://prod_user:prod_password@prod-db:5432/production_db
+          REDIS_URL=redis://prod-redis:6379/0
+          API_KEY=prod_api_key_12345
+          ENCRYPTION_KEY=prod_encryption_key_67890
+        "staging.env": |
+          DATABASE_URL=postgresql://stage_user:stage_password@stage-db:5432/staging_db
+          REDIS_URL=redis://stage-redis:6379/0
+          API_KEY=stage_api_key_abcdef
+          ENCRYPTION_KEY=stage_encryption_key_uvwxyz
+        "development.env": |
+          DATABASE_URL=postgresql://dev_user:dev_password@dev-db:5432/development_db
+          REDIS_URL=redis://dev-redis:6379/0
+          API_KEY=dev_api_key_test123
+          ENCRYPTION_KEY=dev_encryption_key_test456
+
+# Container ports
+containerPorts:
+  - containerPort: 80
+    name: http
+
+# Health checks using simplified probes
+simpleLivenessProbe:
+  httpGet:
+    path: "/health"
+    port: "http"
+
+simpleReadinessProbe:
+  httpGet:
+    path: "/ready"
+    port: "http"
+
+# Resource limits
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 250m
+    memory: 256Mi
+
+# Optional: Add labels for better organization
+podAnnotations:
+  app.example.com/config-version: "v2.0.0"
+  app.example.com/has-secrets: "true"

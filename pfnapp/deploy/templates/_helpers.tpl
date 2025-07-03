@@ -1,7 +1,7 @@
 {{/*
 Expand the name of the chart.
 */}}
-{{- define "common.name" -}}
+{{- define "deploy.name" -}}
 {{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
@@ -10,7 +10,7 @@ Create a default fully qualified app name.
 We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
 If release name contains chart name it will be used as a full name.
 */}}
-{{- define "common.fullname" -}}
+{{- define "deploy.fullname" -}}
 {{- if .Values.fullnameOverride }}
 {{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
 {{- else }}
@@ -26,16 +26,16 @@ If release name contains chart name it will be used as a full name.
 {{/*
 Create chart name and version as used by the chart label.
 */}}
-{{- define "common.chart" -}}
+{{- define "deploy.chart" -}}
 {{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{/*
 Common labels
 */}}
-{{- define "common.labels" -}}
-helm.sh/chart: {{ include "common.chart" . }}
-{{ include "common.selectorLabels" . }}
+{{- define "deploy.labels" -}}
+helm.sh/chart: {{ include "deploy.chart" . }}
+{{ include "deploy.selectorLabels" . }}
 {{- if .Values.image.tag }}
 app.kubernetes.io/version: {{ .Values.image.tag | quote }}
 {{- end }}
@@ -45,57 +45,26 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{/*
 Selector labels
 */}}
-{{- define "common.selectorLabels" -}}
-app.kubernetes.io/name: {{ include "common.name" . }}
+{{- define "deploy.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "deploy.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
 {{/*
 Create the name of the service account to use
 */}}
-{{- define "common.serviceAccountName" -}}
+{{- define "deploy.serviceAccountName" -}}
 {{- if .Values.serviceAccount.create }}
-{{- default (include "common.fullname" .) .Values.serviceAccount.name }}
+{{- default (include "deploy.fullname" .) .Values.serviceAccount.name }}
 {{- else }}
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}
 {{- end }}
 
 {{/*
-Generate TLS secret name from domain (replace dots with dashes)
-Usage: {{ include "common.tlsSecretName" "example.com" }}
-*/}}
-{{- define "common.tlsSecretName" -}}
-{{- . | replace "." "-" | trunc 63 | trimSuffix "-" }}-tls
-{{- end }}
-
-{{/*
-Generate ingress name from domain (replace dots with dashes)
-Usage: {{ include "common.ingressName" (dict "releaseName" .Release.Name "domain" "example.com") }}
-*/}}
-{{- define "common.ingressName" -}}
-{{- printf "%s-%s" .releaseName (.domain | replace "." "-") | trunc 63 | trimSuffix "-" }}
-{{- end }}
-
-{{/*
-Generate external-dns hostname annotation based on domain and externalDns config
-*/}}
-{{- define "common.externalDnsHostname" -}}
-{{- if .externalDns.enabled }}
-external-dns.alpha.kubernetes.io/hostname: {{ .domain }}
-{{- if .externalDns.target }}
-external-dns.alpha.kubernetes.io/target: {{ .externalDns.target }}
-{{- end }}
-{{- if hasKey .externalDns "cloudflareProxied" }}
-external-dns.alpha.kubernetes.io/cloudflare-proxied: {{ .externalDns.cloudflareProxied | quote }}
-{{- end }}
-{{- end }}
-{{- end }}
-
-{{/*
 Generate volume mount ConfigMap and Secret resources
 */}}
-{{- define "common.volumeMounts.resources" -}}
+{{- define "deploy.volumeMounts.resources" -}}
 {{- if and .Values.volumeConfigMaps .Values.volumeConfigMaps.enabled }}
 {{- range $index, $configMap := .Values.volumeConfigMaps.items }}
 {{- if not $configMap.existingConfigMap }}
@@ -103,9 +72,9 @@ Generate volume mount ConfigMap and Secret resources
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ include "common.fullname" $ }}-{{ $configMap.name }}
+  name: {{ include "deploy.fullname" $ }}-{{ $configMap.name }}
   labels:
-    {{- include "common.labels" $ | nindent 4 }}
+    {{- include "deploy.labels" $ | nindent 4 }}
 data:
   {{- range $key, $value := $configMap.data }}
   {{ $key }}: {{ $value | quote }}
@@ -120,9 +89,9 @@ data:
 apiVersion: v1
 kind: Secret
 metadata:
-  name: {{ include "common.fullname" $ }}-{{ $secret.name }}
+  name: {{ include "deploy.fullname" $ }}-{{ $secret.name }}
   labels:
-    {{- include "common.labels" $ | nindent 4 }}
+    {{- include "deploy.labels" $ | nindent 4 }}
 type: Opaque
 stringData:
   {{- range $key, $value := $secret.stringData }}
@@ -136,12 +105,12 @@ stringData:
 {{/*
 Generate volumes for volume mount ConfigMaps and Secrets
 */}}
-{{- define "common.volumeMounts.volumes" -}}
+{{- define "deploy.volumeMounts.volumes" -}}
 {{- if and .Values.volumeConfigMaps .Values.volumeConfigMaps.enabled }}
 {{- range $index, $configMap := .Values.volumeConfigMaps.items }}
 - name: volume-configmap-{{ $configMap.name }}
   configMap:
-    name: {{ $configMap.existingConfigMap | default (printf "%s-%s" (include "common.fullname" $) $configMap.name) }}
+    name: {{ $configMap.existingConfigMap | default (printf "%s-%s" (include "deploy.fullname" $) $configMap.name) }}
     {{- if $configMap.defaultMode }}
     defaultMode: {{ $configMap.defaultMode }}
     {{- end }}
@@ -151,7 +120,7 @@ Generate volumes for volume mount ConfigMaps and Secrets
 {{- range $index, $secret := .Values.volumeSecrets.items }}
 - name: volume-secret-{{ $secret.name }}
   secret:
-    secretName: {{ $secret.existingSecret | default (printf "%s-%s" (include "common.fullname" $) $secret.name) }}
+    secretName: {{ $secret.existingSecret | default (printf "%s-%s" (include "deploy.fullname" $) $secret.name) }}
     {{- if $secret.defaultMode }}
     defaultMode: {{ $secret.defaultMode }}
     {{- end }}
@@ -162,7 +131,7 @@ Generate volumes for volume mount ConfigMaps and Secrets
 {{/*
 Generate volumeMounts for volume mount ConfigMaps and Secrets
 */}}
-{{- define "common.volumeMounts.mounts" -}}
+{{- define "deploy.volumeMounts.mounts" -}}
 {{- if and .Values.volumeConfigMaps .Values.volumeConfigMaps.enabled }}
 {{- range $index, $configMap := .Values.volumeConfigMaps.items }}
 - name: volume-configmap-{{ $configMap.name }}
