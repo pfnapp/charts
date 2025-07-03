@@ -300,6 +300,12 @@ logging:
   enabled: false
   # When enabled, appends "-service" to deployment name and adds log taints
 
+# Stakater Reloader configuration
+# Automatically restarts StatefulSets when ConfigMaps or Secrets change
+reloader:
+  enabled: false
+  # When enabled, adds "reloader.stakater.com/auto: true" annotation to workload metadata
+
 # StatefulSet specific configuration
 statefulset:
   serviceName: ""  # Leave empty to auto-generate same as service name

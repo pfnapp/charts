@@ -3,6 +3,10 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ include "deploy.fullname" . }}{{- if .Values.logging.enabled }}-service{{- end }}
+  {{- if .Values.reloader.enabled }}
+  annotations:
+    reloader.stakater.com/auto: "true"
+  {{- end }}
   labels:
     {{- include "deploy.labels" . | nindent 4 }}
 spec:

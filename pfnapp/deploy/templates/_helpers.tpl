@@ -102,10 +102,18 @@ metadata:
   labels:
     {{- include "deploy.labels" $ | nindent 4 }}
 type: Opaque
+{{- if $secret.data }}
+data:
+  {{- range $key, $value := $secret.data }}
+  {{ $key }}: {{ $value }}
+  {{- end }}
+{{- end }}
+{{- if $secret.stringData }}
 stringData:
   {{- range $key, $value := $secret.stringData }}
   {{ $key }}: {{ $value | quote }}
   {{- end }}
+{{- end }}
 {{- end }}
 {{- end }}
 {{- end }}

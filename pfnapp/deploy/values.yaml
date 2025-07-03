@@ -312,6 +312,12 @@ logging:
   enabled: false
   # When enabled, appends "-service" to deployment name and adds log taints
 
+# Stakater Reloader configuration
+# Automatically restarts deployments/statefulsets when ConfigMaps or Secrets change
+reloader:
+  enabled: false
+  # When enabled, adds "reloader.stakater.com/auto: true" annotation to workload metadata
+
 # StatefulSet specific configuration
 statefulset:
   serviceName: ""  # Leave empty to auto-generate same as service name
@@ -501,10 +507,16 @@ volumeSecrets:
     #   # -- The path inside the container where the volume should be mounted
     #   mountPath: "/etc/secrets"
     #   # -- (Optional) Use an existing Secret instead of creating one
-    #   # If provided, the 'stringData' field will be ignored
+    #   # If provided, the 'data' and 'stringData' fields will be ignored
     #   existingSecret: ""
-    #   # -- (Optional) The data for the Secret to be created
-    #   # Use stringData for plain text values
+    #   # -- (Optional) Base64-encoded secret data (RECOMMENDED for security)
+    #   # Values must be base64 encoded
+    #   data:
+    #     "username": "YWRtaW4="           # base64 encoded "admin"
+    #     "password": "Y2hhbmdlbWU="       # base64 encoded "changeme"
+    #     "api-key": "c2VjcmV0LWFwaS1rZXktaGVyZQ=="  # base64 encoded
+    #   # -- (Optional) Plain text secret data (NOT RECOMMENDED - use 'data' instead)
+    #   # Use this only for development/testing
     #   stringData:
     #     "username": "admin"
     #     "password": "changeme"
@@ -512,7 +524,7 @@ volumeSecrets:
     #   # -- (Optional) Specify the file mode bits for the mounted files
     #   defaultMode: 0400
     #   # -- (Optional) Mount a specific key from the Secret as a single file
-    #   # The value of subPath should be a key from the 'stringData' map
+    #   # The value of subPath should be a key from the 'data' or 'stringData' map
     #   subPath: "" # e.g., "username"
     #   # -- (Optional) Mount the volume as read-only (recommended for secrets)
     #   readOnly: true

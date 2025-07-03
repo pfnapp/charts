@@ -2,6 +2,10 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: {{ include "sts.fullname" . }}{{- if .Values.logging.enabled }}-service{{- end }}
+  {{- if .Values.reloader.enabled }}
+  annotations:
+    reloader.stakater.com/auto: "true"
+  {{- end }}
   labels:
     {{- include "sts.labels" . | nindent 4 }}
 spec:
