@@ -85,8 +85,12 @@ metadata:
   labels:
     {{- include "deploy.labels" $ | nindent 4 }}
 data:
+  {{- if $configMap.data }}
   {{- range $key, $value := $configMap.data }}
   {{ $key }}: {{ $value | quote }}
+  {{- end }}
+  {{- else if and $configMap.content $configMap.filename }}
+  {{ $configMap.filename }}: {{ $configMap.content | quote }}
   {{- end }}
 {{- end }}
 {{- end }}
@@ -107,8 +111,11 @@ data:
   {{- range $key, $value := $secret.data }}
   {{ $key }}: {{ $value }}
   {{- end }}
+{{- else if and $secret.content $secret.filename }}
+stringData:
+  {{ $secret.filename }}: {{ $secret.content | quote }}
 {{- end }}
-{{- if $secret.stringData }}
+{{- if and $secret.stringData (not (and $secret.content $secret.filename)) }}
 stringData:
   {{- range $key, $value := $secret.stringData }}
   {{ $key }}: {{ $value | quote }}

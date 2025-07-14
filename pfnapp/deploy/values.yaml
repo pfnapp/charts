@@ -567,6 +567,17 @@ volumeConfigMaps:
     #         name: myapp
     #         debug: true
     #     "feature-flags.txt": "ENABLE_FEATURE_X=true"
+    #   # -- (Alternative) Direct content approach - specify filename and content separately
+    #   # Use either 'data' (key-value) OR 'filename'+'content' (direct), not both
+    #   # filename: "nginx.conf"
+    #   # content: |
+    #   #   server {
+    #   #     listen 80;
+    #   #     server_name _;
+    #   #     location / {
+    #   #       proxy_pass http://backend;
+    #   #     }
+    #   #   }
     #   # -- (Optional) Specify the file mode bits for the mounted files
     #   defaultMode: 0644
     #   # -- (Optional) Mount a specific key from the ConfigMap as a single file
@@ -599,6 +610,13 @@ volumeSecrets:
     #     "username": "admin"
     #     "password": "changeme"
     #     "api-key": "secret-api-key-here"
+    #   # -- (Alternative) Direct content approach - specify filename and content separately
+    #   # Use either 'data'/'stringData' (key-value) OR 'filename'+'content' (direct), not both
+    #   # filename: "app.key"
+    #   # content: |
+    #   #   -----BEGIN PRIVATE KEY-----
+    #   #   MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC7...
+    #   #   -----END PRIVATE KEY-----
     #   # -- (Optional) Specify the file mode bits for the mounted files
     #   defaultMode: 0400
     #   # -- (Optional) Mount a specific key from the Secret as a single file
