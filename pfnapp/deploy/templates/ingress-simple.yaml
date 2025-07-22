@@ -80,11 +80,11 @@ metadata:
     {{- end }}
     {{- /* IP whitelist */ -}}
     {{- if and $haproxy.ipFilter $haproxy.ipFilter.whitelist $haproxy.ipFilter.whitelist.enabled $haproxy.ipFilter.whitelist.ips }}
-    haproxy.ingress.kubernetes.io/whitelist-source-range: {{ join "," $haproxy.ipFilter.whitelist.ips | quote }}
+    haproxy.org/whitelist: {{ join "," $haproxy.ipFilter.whitelist.ips | quote }}
     {{- end }}
     {{- /* IP blacklist */ -}}
     {{- if and $haproxy.ipFilter $haproxy.ipFilter.blacklist $haproxy.ipFilter.blacklist.enabled $haproxy.ipFilter.blacklist.ips }}
-    haproxy.ingress.kubernetes.io/blacklist-source-range: {{ join "," $haproxy.ipFilter.blacklist.ips | quote }}
+    haproxy.org/blacklist: {{ join "," $haproxy.ipFilter.blacklist.ips | quote }}
     {{- end }}
     {{- /* CORS configuration */ -}}
     {{- if and $haproxy.cors $haproxy.cors.enabled }}
