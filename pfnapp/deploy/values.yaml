@@ -49,7 +49,14 @@ imagePullSecrets: []
 serviceAccount:
   create: false
   annotations: {}
+  labels: {}
   name: ""
+
+# RBAC configuration
+rbac:
+  enabled: false
+  kind: ClusterRole             # ClusterRole or Role
+  rules: []                     # Required when enabled; no defaults provided
 
 # Pod annotations
 podAnnotations: {}

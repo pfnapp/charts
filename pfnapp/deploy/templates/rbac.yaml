@@ -1,0 +1,38 @@
+{{- if and .Values.rbac .Values.rbac.enabled }}
+{{- $roleKind := default "ClusterRole" .Values.rbac.kind }}
+{{- $roleName := printf "%s-access" (include "deploy.fullname" .) }}
+{{- $rules := .Values.rbac.rules }}
+{{- if not (and $rules (gt (len $rules) 0)) }}
+{{- fail "Values.rbac.rules must be provided when rbac.enabled is true" }}
+{{- end }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: {{ $roleKind }}
+metadata:
+  name: {{ $roleName }}
+  labels:
+    {{- include "deploy.labels" . | nindent 4 }}
+rules:
+{{- toYaml $rules | nindent 2 }}
+{{- $bindingKind := ternary "ClusterRoleBinding" "RoleBinding" (eq $roleKind "ClusterRole") }}
+{{- $bindingName := printf "%s-binding" $roleName }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: {{ $bindingKind }}
+metadata:
+  name: {{ $bindingName }}
+  labels:
+    {{- include "deploy.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: {{ $roleKind }}
+  name: {{ $roleName }}
+subjects:
+{{- if or .Values.serviceAccount.create .Values.serviceAccount.name }}
+  - kind: ServiceAccount
+    name: {{ include "deploy.serviceAccountName" . }}
+    namespace: {{ .Release.Namespace }}
+{{- else }}
+{{- fail "RBAC binding requires a serviceAccount when rbac.enabled is true" }}
+{{- end }}
+{{- end }}

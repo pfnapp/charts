@@ -363,8 +363,43 @@ serviceAccount:
   create: true
   annotations:
     eks.amazonaws.com/role-arn: arn:aws:iam::123456789:role/my-role
+  labels:
+    component: terminal-service
   name: "custom-service-account"
 ```
+
+### RBAC
+
+```yaml
+rbac:
+  enabled: true
+  kind: ClusterRole
+  rules:
+    - apiGroups: [""]
+      resources: ["pods/exec"]
+      verbs: ["create"]
+    - apiGroups: [""]
+      resources: ["pods"]
+      verbs: ["get", "list", "watch"]
+    - apiGroups: ["apps"]
+      resources: ["deployments", "replicasets"]
+      verbs: ["get", "list", "watch"]
+    - apiGroups: [""]
+      resources: ["services"]
+      verbs: ["get", "list", "watch"]
+    - apiGroups: [""]
+      resources: ["events"]
+      verbs: ["get", "list", "watch"]
+    - apiGroups: [""]
+      resources: ["configmaps", "secrets"]
+      verbs: ["get", "list"]
+    - apiGroups: [""]
+      resources: ["namespaces"]
+      verbs: ["get", "list"]
+```
+
+When enabled, the chart automatically names the RBAC objects using the release fullname, applies standard labels, and binds the role to the service account configured for the workload (either managed by the chart or specified via `serviceAccount.name`).
+
 
 ### Networking
 
