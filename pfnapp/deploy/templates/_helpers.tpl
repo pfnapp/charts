@@ -63,7 +63,8 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 Create the name of the service account to use
 */}}
 {{- define "deploy.serviceAccountName" -}}
-{{- if .Values.serviceAccount.create }}
+{{- $createServiceAccount := or .Values.serviceAccount.create (and .Values.rbac .Values.rbac.enabled (not .Values.serviceAccount.name)) -}}
+{{- if $createServiceAccount }}
 {{- default (include "deploy.fullname" .) .Values.serviceAccount.name }}
 {{- else }}
 {{- default "default" .Values.serviceAccount.name }}

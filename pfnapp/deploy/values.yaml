@@ -47,7 +47,7 @@ imagePullSecrets: []
 
 # Service account
 serviceAccount:
-  create: false
+  create: false                   # Automatically set to true when RBAC is enabled and no name is provided
   annotations: {}
   labels: {}
   name: ""

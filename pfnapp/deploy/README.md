@@ -368,6 +368,8 @@ serviceAccount:
   name: "custom-service-account"
 ```
 
+If you skip this block, the chart automatically creates a service account (named after the release) whenever RBAC is enabled, applying the standard chart labels.
+
 ### RBAC
 
 ```yaml

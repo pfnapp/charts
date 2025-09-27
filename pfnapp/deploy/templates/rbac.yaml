@@ -2,6 +2,7 @@
 {{- $roleKind := default "ClusterRole" .Values.rbac.kind }}
 {{- $roleName := printf "%s-access" (include "deploy.fullname" .) }}
 {{- $rules := .Values.rbac.rules }}
+{{- $createServiceAccount := or .Values.serviceAccount.create (and .Values.rbac .Values.rbac.enabled (not .Values.serviceAccount.name)) -}}
 {{- if not (and $rules (gt (len $rules) 0)) }}
 {{- fail "Values.rbac.rules must be provided when rbac.enabled is true" }}
 {{- end }}
@@ -28,7 +29,7 @@ roleRef:
   kind: {{ $roleKind }}
   name: {{ $roleName }}
 subjects:
-{{- if or .Values.serviceAccount.create .Values.serviceAccount.name }}
+{{- if or $createServiceAccount .Values.serviceAccount.name }}
   - kind: ServiceAccount
     name: {{ include "deploy.serviceAccountName" . }}
     namespace: {{ .Release.Namespace }}
