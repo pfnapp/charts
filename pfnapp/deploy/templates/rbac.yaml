@@ -1,73 +1,97 @@
-{{- if and .Values.rbac .Values.rbac.enabled }}
-{{- $roleKind := default "ClusterRole" .Values.rbac.kind }}
-{{- $roleName := printf "%s-access" (include "deploy.fullname" .) }}
-{{- $rules := .Values.rbac.rules }}
-{{- $createServiceAccount := or .Values.serviceAccount.create (and .Values.rbac .Values.rbac.enabled (not .Values.serviceAccount.name)) -}}
-{{- if not (and $rules (gt (len $rules) 0)) }}
-{{- fail "Values.rbac.rules must be provided when rbac.enabled is true" }}
-{{- end }}
+{{- $root := . -}}
+{{- $rbacConfig := $root.Values.rbac -}}
+{{- $rolesData := dict "roles" (list) -}}
+{{- if kindIs "map" $rbacConfig -}}
+  {{- if or $rbacConfig.enabled (and $rbacConfig.namespaceRole $rbacConfig.namespaceRole.enabled) -}}
+    {{- if $rbacConfig.enabled -}}
+      {{- $rules := $rbacConfig.rules -}}
+      {{- if not (and $rules (gt (len $rules) 0)) -}}
+        {{- fail "Values.rbac.rules must be provided when rbac.enabled is true" -}}
+      {{- end -}}
+      {{- $roleKind := default "ClusterRole" $rbacConfig.kind -}}
+      {{- $roleDict := dict "kind" $roleKind "rules" $rules "name" (printf "%s-access" (include "deploy.fullname" $root)) "bindingEnabled" true "bindingKind" (ternary "ClusterRoleBinding" "RoleBinding" (eq $roleKind "ClusterRole")) "bindingName" (printf "%s-access-binding" (include "deploy.fullname" $root)) "namespace" $root.Release.Namespace -}}
+      {{- $_ := set $rolesData "roles" (append (get $rolesData "roles") $roleDict) -}}
+    {{- end -}}
+    {{- $namespaceRole := $rbacConfig.namespaceRole -}}
+    {{- if and $namespaceRole $namespaceRole.enabled -}}
+      {{- $namespaceRules := $namespaceRole.rules -}}
+      {{- if not (and $namespaceRules (gt (len $namespaceRules) 0)) -}}
+        {{- fail "Values.rbac.namespaceRole.rules must be provided when namespaceRole.enabled is true" -}}
+      {{- end -}}
+      {{- $nsDict := dict "kind" "Role" "rules" $namespaceRules "name" (printf "%s-namespace-access" (include "deploy.fullname" $root)) "bindingEnabled" true "bindingKind" "RoleBinding" "bindingName" (printf "%s-namespace-access-binding" (include "deploy.fullname" $root)) "namespace" $root.Release.Namespace -}}
+      {{- $_ := set $rolesData "roles" (append (get $rolesData "roles") $nsDict) -}}
+    {{- end -}}
+  {{- end -}}
+{{- else if kindIs "slice" $rbacConfig -}}
+  {{- range $index, $entry := $rbacConfig -}}
+    {{- if and (kindIs "map" $entry) (ne (default true $entry.enabled) false) -}}
+      {{- $rules := $entry.rules -}}
+      {{- if not (and $rules (gt (len $rules) 0)) -}}
+        {{- fail (printf "Values.rbac[%d].rules must be provided when enabled is true" $index) -}}
+      {{- end -}}
+      {{- $kind := default "ClusterRole" $entry.kind -}}
+      {{- $name := default (printf "%s-rbac-%d" (include "deploy.fullname" $root) (add $index 1)) $entry.name -}}
+      {{- $bindingEnabled := ne (default true $entry.bindingEnabled) false -}}
+      {{- $bindingKind := default (ternary "ClusterRoleBinding" "RoleBinding" (eq $kind "ClusterRole")) $entry.bindingKind -}}
+      {{- $bindingName := default (printf "%s-binding" $name) $entry.bindingName -}}
+      {{- $namespace := default $root.Release.Namespace $entry.namespace -}}
+      {{- $roleDict := dict "kind" $kind "rules" $rules "name" $name "bindingEnabled" $bindingEnabled "bindingKind" $bindingKind "bindingName" $bindingName "namespace" $namespace "subjects" $entry.subjects "labels" $entry.labels "annotations" $entry.annotations -}}
+      {{- $_ := set $rolesData "roles" (append (get $rolesData "roles") $roleDict) -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+{{- $roles := get $rolesData "roles" -}}
+{{- if gt (len $roles) 0 -}}
+  {{- range $index, $role := $roles -}}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
-kind: {{ $roleKind }}
+kind: {{ $role.kind }}
 metadata:
-  name: {{ $roleName }}
+  name: {{ $role.name }}
+  {{- if and (eq $role.kind "Role") $role.namespace }}
+  namespace: {{ $role.namespace }}
+  {{- end }}
   labels:
-    {{- include "deploy.labels" . | nindent 4 }}
+    {{- include "deploy.labels" $root | nindent 4 }}
+    {{- with $role.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- with $role.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
 rules:
-{{- toYaml $rules | nindent 2 }}
-{{- $bindingKind := ternary "ClusterRoleBinding" "RoleBinding" (eq $roleKind "ClusterRole") }}
-{{- $bindingName := printf "%s-binding" $roleName }}
+{{- toYaml $role.rules | nindent 2 }}
+  {{- if $role.bindingEnabled }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
-kind: {{ $bindingKind }}
+kind: {{ $role.bindingKind }}
 metadata:
-  name: {{ $bindingName }}
+  name: {{ $role.bindingName }}
+  {{- if and (eq $role.bindingKind "RoleBinding") $role.namespace }}
+  namespace: {{ $role.namespace }}
+  {{- end }}
   labels:
-    {{- include "deploy.labels" . | nindent 4 }}
+    {{- include "deploy.labels" $root | nindent 4 }}
+    {{- with $role.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- with $role.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
-  kind: {{ $roleKind }}
-  name: {{ $roleName }}
+  kind: {{ $role.kind }}
+  name: {{ $role.name }}
 subjects:
-{{- if or $createServiceAccount .Values.serviceAccount.name }}
-  - kind: ServiceAccount
-    name: {{ include "deploy.serviceAccountName" . }}
-    namespace: {{ .Release.Namespace }}
+{{- if and $role.subjects (gt (len $role.subjects) 0) }}
+{{- toYaml $role.subjects | nindent 2 }}
 {{- else }}
-{{- fail "RBAC binding requires a serviceAccount when rbac.enabled is true" }}
-{{- end }}
-{{- $namespaceRole := .Values.rbac.namespaceRole }}
-{{- if and $namespaceRole $namespaceRole.enabled }}
-{{- $namespaceRoleName := printf "%s-namespace-access" (include "deploy.fullname" .) }}
-{{- $namespaceRules := $namespaceRole.rules }}
-{{- if not (and $namespaceRules (gt (len $namespaceRules) 0)) }}
-{{- fail "Values.rbac.namespaceRole.rules must be provided when namespaceRole.enabled is true" }}
-{{- end }}
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
-metadata:
-  name: {{ $namespaceRoleName }}
-  namespace: {{ .Release.Namespace }}
-  labels:
-    {{- include "deploy.labels" . | nindent 4 }}
-rules:
-{{- toYaml $namespaceRules | nindent 2 }}
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
-metadata:
-  name: {{ printf "%s-binding" $namespaceRoleName }}
-  namespace: {{ .Release.Namespace }}
-  labels:
-    {{- include "deploy.labels" . | nindent 4 }}
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: Role
-  name: {{ $namespaceRoleName }}
-subjects:
   - kind: ServiceAccount
-    name: {{ include "deploy.serviceAccountName" . }}
-    namespace: {{ .Release.Namespace }}
+    name: {{ include "deploy.serviceAccountName" $root }}
+    namespace: {{ if eq $role.bindingKind "ClusterRoleBinding" }}{{ $root.Release.Namespace }}{{ else }}{{ default $root.Release.Namespace $role.namespace }}{{ end }}
+{{- end }}
+{{ end }}
 {{- end }}
 {{- end }}

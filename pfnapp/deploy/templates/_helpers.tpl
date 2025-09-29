@@ -62,13 +62,34 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{/*
 Create the name of the service account to use
 */}}
-{{- define "deploy.serviceAccountName" -}}
-{{- $createServiceAccount := or .Values.serviceAccount.create (and .Values.rbac .Values.rbac.enabled (not .Values.serviceAccount.name)) -}}
-{{- if $createServiceAccount }}
-{{- default (include "deploy.fullname" .) .Values.serviceAccount.name }}
-{{- else }}
-{{- default "default" .Values.serviceAccount.name }}
+{{/*
+Return true when any RBAC configuration is enabled (map or slice format)
+*/}}
+{{- define "deploy.rbacIsEnabled" -}}
+{{- $rbac := .Values.rbac -}}
+{{- $state := dict "enabled" false -}}
+{{- if kindIs "map" $rbac -}}
+  {{- if or $rbac.enabled (and $rbac.namespaceRole $rbac.namespaceRole.enabled) -}}
+    {{- $_ := set $state "enabled" true -}}
+  {{- end -}}
+{{- else if kindIs "slice" $rbac -}}
+  {{- range $rbac -}}
+    {{- if and (kindIs "map" .) (ne (default true .enabled) false) -}}
+      {{- $_ := set $state "enabled" true -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+{{- get $state "enabled" -}}
 {{- end }}
+
+{{- define "deploy.serviceAccountName" -}}
+{{- $rbacEnabled := (include "deploy.rbacIsEnabled" . | trim) | eq "true" -}}
+{{- $createServiceAccount := or .Values.serviceAccount.create (and (not .Values.serviceAccount.name) $rbacEnabled) -}}
+{{- if $createServiceAccount -}}
+  {{- default (include "deploy.fullname" .) .Values.serviceAccount.name -}}
+{{- else -}}
+  {{- default "default" .Values.serviceAccount.name -}}
+{{- end -}}
 {{- end }}
 
 {{/*

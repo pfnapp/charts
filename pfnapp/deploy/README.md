@@ -373,6 +373,8 @@ If you skip this block, the chart automatically creates a service account (named
 
 ### RBAC
 
+#### Standard configuration
+
 ```yaml
 rbac:
   enabled: true
@@ -416,6 +418,37 @@ rbac:
 When enabled, the chart automatically names the RBAC objects using the release fullname, applies standard labels, and binds the role to the service account configured for the workload (either managed by the chart or specified via `serviceAccount.name`).
 
 Namespace-level roles are optional. Enable `rbac.namespaceRole` to create a Role/RoleBinding scoped to the release namespace (useful when the workload needs elevated permissions in its own namespace while keeping cluster-wide discovery permissions separate).
+
+#### Multiple roles (list syntax)
+
+To define more than one RBAC object, replace the map with an array:
+
+```yaml
+rbac:
+  - enabled: true
+    kind: ClusterRole
+    name: pfn-terminal-api-role
+    bindingName: pfn-terminal-api-binding
+    rules:
+      - apiGroups: [""]
+        resources: ["pods", "pods/exec", "pods/status", "pods/log"]
+        verbs: ["get", "list", "watch", "create"]
+  - enabled: true
+    kind: Role
+    namespace: pfnapp-dev-alesha
+    name: pfn-terminal-namespace-role
+    bindingName: pfn-terminal-namespace-binding
+    rules:
+      - apiGroups: [""]
+        resources: ["pods", "pods/exec", "pods/attach", "pods/log", "pods/status"]
+        verbs: ["*"]
+    subjects:
+      - kind: ServiceAccount
+        name: pfn-terminal-service
+        namespace: pfnapp-dev-alesha
+```
+
+Each element defaults to binding against the chart-managed service account unless you supply custom `subjects`. Optional fields like `bindingEnabled`, `bindingKind`, `labels`, and `annotations` are also supported per entry.
 
 
 ### Networking

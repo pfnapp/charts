@@ -54,6 +54,10 @@ serviceAccount:
   name: ""
 
 # RBAC configuration
+# This chart supports both the legacy object syntax (shown below) and an
+# advanced list syntax for defining multiple roles. When a list is provided,
+# each entry should contain `enabled`, `kind`, `rules`, and optional fields
+# such as `name`, `bindingName`, `namespace`, `subjects`, etc.
 rbac:
   enabled: false
   kind: ClusterRole             # ClusterRole or Role
@@ -61,6 +65,23 @@ rbac:
   namespaceRole:
     enabled: false
     rules: []                   # Required when enabled; applies within release namespace
+  # Example of list syntax:
+  # rbac:
+  #   - enabled: true
+  #     kind: ClusterRole
+  #     name: pfn-terminal-api-role
+  #     bindingName: pfn-terminal-api-binding
+  #     rules:
+  #       - apiGroups: ["apps"]
+  #         resources: ["deployments"]
+  #         verbs: ["get", "list", "watch"]
+  #   - enabled: true
+  #     kind: Role
+  #     namespace: pfnapp-dev-alesha
+  #     rules:
+  #       - apiGroups: [""]
+  #         resources: ["pods", "pods/exec"]
+  #         verbs: ["*"]
 
 # Pod annotations
 podAnnotations: {}
