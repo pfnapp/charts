@@ -365,6 +365,7 @@ serviceAccount:
     eks.amazonaws.com/role-arn: arn:aws:iam::123456789:role/my-role
   labels:
     component: terminal-service
+  automountServiceAccountToken: true
   name: "custom-service-account"
 ```
 
@@ -398,9 +399,23 @@ rbac:
     - apiGroups: [""]
       resources: ["namespaces"]
       verbs: ["get", "list"]
+  namespaceRole:
+    enabled: true
+    rules:
+      - apiGroups: [""]
+        resources: ["pods", "pods/exec", "pods/attach", "pods/log", "pods/status"]
+        verbs: ["*"]
+      - apiGroups: [""]
+        resources: ["configmaps", "secrets"]
+        verbs: ["*"]
+      - apiGroups: [""]
+        resources: ["services", "endpoints"]
+        verbs: ["*"]
 ```
 
 When enabled, the chart automatically names the RBAC objects using the release fullname, applies standard labels, and binds the role to the service account configured for the workload (either managed by the chart or specified via `serviceAccount.name`).
+
+Namespace-level roles are optional. Enable `rbac.namespaceRole` to create a Role/RoleBinding scoped to the release namespace (useful when the workload needs elevated permissions in its own namespace while keeping cluster-wide discovery permissions separate).
 
 
 ### Networking

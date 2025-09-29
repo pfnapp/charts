@@ -50,6 +50,7 @@ serviceAccount:
   create: false                   # Automatically set to true when RBAC is enabled and no name is provided
   annotations: {}
   labels: {}
+  automountServiceAccountToken: null
   name: ""
 
 # RBAC configuration
@@ -57,6 +58,9 @@ rbac:
   enabled: false
   kind: ClusterRole             # ClusterRole or Role
   rules: []                     # Required when enabled; no defaults provided
+  namespaceRole:
+    enabled: false
+    rules: []                   # Required when enabled; applies within release namespace
 
 # Pod annotations
 podAnnotations: {}

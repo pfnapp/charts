@@ -36,4 +36,38 @@ subjects:
 {{- else }}
 {{- fail "RBAC binding requires a serviceAccount when rbac.enabled is true" }}
 {{- end }}
+{{- $namespaceRole := .Values.rbac.namespaceRole }}
+{{- if and $namespaceRole $namespaceRole.enabled }}
+{{- $namespaceRoleName := printf "%s-namespace-access" (include "deploy.fullname" .) }}
+{{- $namespaceRules := $namespaceRole.rules }}
+{{- if not (and $namespaceRules (gt (len $namespaceRules) 0)) }}
+{{- fail "Values.rbac.namespaceRole.rules must be provided when namespaceRole.enabled is true" }}
+{{- end }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ $namespaceRoleName }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "deploy.labels" . | nindent 4 }}
+rules:
+{{- toYaml $namespaceRules | nindent 2 }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ printf "%s-binding" $namespaceRoleName }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "deploy.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ $namespaceRoleName }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "deploy.serviceAccountName" . }}
+    namespace: {{ .Release.Namespace }}
+{{- end }}
 {{- end }}
