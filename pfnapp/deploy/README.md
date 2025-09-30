@@ -427,8 +427,6 @@ To define more than one RBAC object, replace the map with an array:
 rbac:
   - enabled: true
     kind: ClusterRole
-    name: pfn-terminal-api-role
-    bindingName: pfn-terminal-api-binding
     rules:
       - apiGroups: [""]
         resources: ["pods", "pods/exec", "pods/status", "pods/log"]
@@ -436,19 +434,13 @@ rbac:
   - enabled: true
     kind: Role
     namespace: pfnapp-dev-alesha
-    name: pfn-terminal-namespace-role
-    bindingName: pfn-terminal-namespace-binding
     rules:
       - apiGroups: [""]
         resources: ["pods", "pods/exec", "pods/attach", "pods/log", "pods/status"]
         verbs: ["*"]
-    subjects:
-      - kind: ServiceAccount
-        name: pfn-terminal-service
-        namespace: pfnapp-dev-alesha
 ```
 
-Each element defaults to binding against the chart-managed service account unless you supply custom `subjects`. Optional fields like `bindingEnabled`, `bindingKind`, `labels`, and `annotations` are also supported per entry.
+Each list entry automatically derives a unique name and binding name from the release fullname via the chart helper (`deploy.fullname`) and binds to the chart-managed service account (or the one provided via `serviceAccount.name`). You can still override fields such as `name`, `bindingName`, `bindingEnabled`, `bindingKind`, `labels`, `annotations`, `namespace`, or provide custom `subjects` when needed.
 
 
 ### Networking
