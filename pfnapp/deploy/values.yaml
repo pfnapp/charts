@@ -430,17 +430,27 @@ reloader:
 
 # StatefulSet specific configuration
 statefulset:
-  serviceName: ""  # Leave empty to auto-generate same as service name
+  serviceName: ""  # Leave empty to auto-generate as "<release-name>-headless"
   volumeClaimTemplates: []
-    # Example:
+    # Example - Advanced volumeClaimTemplates configuration:
     # - metadata:
     #     name: data
+    #     labels:
+    #       type: database
     #   spec:
     #     accessModes: ["ReadWriteOnce"]
     #     storageClassName: "fast-ssd"
     #     resources:
     #       requests:
     #         storage: 10Gi
+    #
+    # Note: For simpler storage configuration, use simpleStorage instead.
+    #       simpleStorage automatically converts to volumeClaimTemplates for StatefulSet.
+    #
+    # Storage options for StatefulSet:
+    # 1. simpleStorage: Simplest option, auto-converts to volumeClaimTemplates
+    # 2. volumeClaimTemplates: Full control over volume claim templates
+    # 3. simpleVolumes: Creates external PVCs for shared storage across pods
 
 # Container ports
 containerPorts:
@@ -553,21 +563,28 @@ simpleVolumes: []
   #   accessModes: ["ReadWriteMany"]
   #   name: "cache-volume"
 
-# Ultra-simplified storage for Deployments - creates external PVCs
+# Ultra-simplified storage - adapts based on deployment type
+# Deployment: Creates external PVCs (shared storage)
+# StatefulSet: Creates volumeClaimTemplates (per-pod storage)
 simpleStorage: []
-  # Examples - even simpler than simpleVolumes, optimized for Deployments:
+  # Examples - even simpler than simpleVolumes:
   # - path: "/uploads"                # Required: mount path
   #   size: "50Gi"                    # Required: storage size
   #   class: "fast-ssd"               # Required: storage class
-  #   # That's it! Automatically creates:
-  #   # - PVC with name "uploads"
+  #
+  #   # Deployment behavior:
+  #   # - Creates external PVC with name "uploads"
   #   # - volumeMount to /uploads
-  #   # - accessModes: ["ReadWriteMany"] (Deployment default for sharing)
+  #   # - accessModes: ["ReadWriteMany"] (default for sharing across replicas)
+  #
+  #   # StatefulSet behavior:
+  #   # - Creates volumeClaimTemplate with name "uploads"
+  #   # - Each pod gets its own PVC (uploads-0, uploads-1, etc.)
+  #   # - accessModes: ["ReadWriteOnce"] (default for per-pod storage)
   #
   # - path: "/cache"
   #   size: "10Gi"
   #   class: "standard"
-  #   # Creates PVC "cache" mounted at /cache
   #
   # Advanced options (optional):
   # - path: "/shared-data"
@@ -575,6 +592,8 @@ simpleStorage: []
   #   class: "ultra-fast"
   #   name: "application-data"        # Custom name instead of auto-generated
   #   accessModes: ["ReadWriteOnce"]  # Override default
+  #
+  # Note: For shared storage in StatefulSet, use simpleVolumes instead
 
 # ==============================================================================
 # Volume Mounts for ConfigMaps and Secrets

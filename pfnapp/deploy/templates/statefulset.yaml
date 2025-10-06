@@ -1,6 +1,6 @@
-{{- if eq .Values.deploymentType "deployment" }}
+{{- if eq .Values.deploymentType "statefulset" }}
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
   name: {{ include "deploy.fullname" . }}{{- if .Values.logging.enabled }}-service{{- end }}
   {{- if .Values.reloader.enabled }}
@@ -13,6 +13,7 @@ spec:
   {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.replicaCount }}
   {{- end }}
+  serviceName: {{ .Values.statefulset.serviceName | default (printf "%s-%s" (include "deploy.fullname" .) "headless") }}
   selector:
     matchLabels:
       {{- include "deploy.selectorLabels" . | nindent 6 }}
@@ -201,7 +202,7 @@ spec:
             {{- end }}
             {{- include "deploy.volumeMounts.mounts" . | nindent 12 }}
           {{- end }}
-      {{- if or .Values.volumes .Values.simpleMounts .Values.simpleVolumes .Values.simpleStorage .Values.volumeConfigMaps.enabled .Values.volumeSecrets.enabled }}
+      {{- if or .Values.volumes .Values.simpleMounts .Values.simpleVolumes .Values.volumeConfigMaps.enabled .Values.volumeSecrets.enabled }}
       volumes:
         {{- with .Values.volumes }}
         {{- toYaml . | nindent 8 }}
@@ -221,16 +222,30 @@ spec:
           persistentVolumeClaim:
             claimName: {{ include "deploy.fullname" $ }}-{{ $volume.name | default (printf "simple-volume-%d" $index) }}
         {{- end }}
-        {{- range $storage := .Values.simpleStorage }}
-        {{- $cleanPath := $storage.path | trimPrefix "/" | replace "/" "-" }}
-        - name: {{ $storage.name | default ($cleanPath | default "root") }}
-          persistentVolumeClaim:
-            claimName: {{ include "deploy.fullname" $ }}-{{ $storage.name | default ($cleanPath | default "root") }}
-        {{- end }}
         {{- include "deploy.volumeMounts.volumes" . | nindent 8 }}
       {{- end }}
+  {{- if or .Values.statefulset.volumeClaimTemplates .Values.simpleStorage }}
+  volumeClaimTemplates:
+    {{- if .Values.statefulset.volumeClaimTemplates }}
+    {{- toYaml .Values.statefulset.volumeClaimTemplates | nindent 4 }}
+    {{- end }}
+    {{- range $storage := .Values.simpleStorage }}
+    {{- $cleanPath := $storage.path | trimPrefix "/" | replace "/" "-" }}
+    - metadata:
+        name: {{ $storage.name | default ($cleanPath | default "root") }}
+      spec:
+        accessModes:
+          {{- range $storage.accessModes | default (list "ReadWriteOnce") }}
+          - {{ . }}
+          {{- end }}
+        storageClassName: {{ $storage.class }}
+        resources:
+          requests:
+            storage: {{ $storage.size }}
+    {{- end }}
+  {{- end }}
 {{- end }}
-{{- if and (eq .Values.deploymentType "deployment") (or .Values.simpleVolumes .Values.simpleStorage) }}
+{{- if and (eq .Values.deploymentType "statefulset") .Values.simpleVolumes }}
 ---
 {{- range $index, $volume := .Values.simpleVolumes }}
 apiVersion: v1
@@ -248,25 +263,6 @@ spec:
   resources:
     requests:
       storage: {{ $volume.size }}
----
-{{- end }}
-{{- range $storage := .Values.simpleStorage }}
-{{- $cleanPath := $storage.path | trimPrefix "/" | replace "/" "-" }}
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: {{ include "deploy.fullname" $ }}-{{ $storage.name | default ($cleanPath | default "root") }}
-  labels:
-    {{- include "deploy.labels" $ | nindent 4 }}
-spec:
-  accessModes:
-    {{- range $storage.accessModes | default (list "ReadWriteMany") }}
-    - {{ . }}
-    {{- end }}
-  storageClassName: {{ $storage.class }}
-  resources:
-    requests:
-      storage: {{ $storage.size }}
 ---
 {{- end }}
 {{- end }}
