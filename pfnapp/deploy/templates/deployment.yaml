@@ -13,6 +13,10 @@ spec:
   {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.replicaCount }}
   {{- end }}
+  {{- if .Values.strategy }}
+  strategy:
+    {{- toYaml .Values.strategy | nindent 4 }}
+  {{- end }}
   selector:
     matchLabels:
       {{- include "deploy.selectorLabels" . | nindent 6 }}
@@ -270,4 +274,3 @@ spec:
 ---
 {{- end }}
 {{- end }}
-{{- include "deploy.volumeMounts.resources" . }}
