@@ -96,7 +96,7 @@ Return true when any RBAC configuration is enabled (map or slice format)
 Generate volume mount ConfigMap and Secret resources
 */}}
 {{- define "deploy.volumeMounts.resources" -}}
-{{- if and .Values.volumeConfigMaps .Values.volumeConfigMaps.enabled }}
+{{- if and .Values.volumeConfigMaps .Values.volumeConfigMaps.enabled (not (hasKey . "volumeConfigMapsRendered")) }}
 {{- range $index, $configMap := .Values.volumeConfigMaps.items }}
 {{- if not $configMap.existingConfigMap }}
 ---

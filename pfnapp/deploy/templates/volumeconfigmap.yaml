@@ -1,0 +1,21 @@
+{{- if and .Values.volumeConfigMaps .Values.volumeConfigMaps.enabled }}
+{{- range $index, $configMap := .Values.volumeConfigMaps.items }}
+{{- if not $configMap.existingConfigMap }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "deploy.fullname" $ }}-{{ $configMap.name }}
+  labels:
+    {{- include "deploy.labels" $ | nindent 4 }}
+data:
+  {{- if $configMap.data }}
+  {{- range $key, $value := $configMap.data }}
+  {{ $key }}: {{ $value | quote }}
+  {{- end }}
+  {{- else if and $configMap.content $configMap.filename }}
+  {{ $configMap.filename }}: {{ $configMap.content | quote }}
+  {{- end }}
+{{- end }}
+{{- end }}
+{{- end }}

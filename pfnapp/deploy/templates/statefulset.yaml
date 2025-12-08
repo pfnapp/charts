@@ -13,6 +13,10 @@ spec:
   {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.replicaCount }}
   {{- end }}
+  {{- if .Values.strategy }}
+  updateStrategy:
+    {{- toYaml .Values.strategy | nindent 4 }}
+  {{- end }}
   serviceName: {{ .Values.statefulset.serviceName | default (printf "%s-%s" (include "deploy.fullname" .) "headless") }}
   selector:
     matchLabels:
@@ -266,4 +270,3 @@ spec:
 ---
 {{- end }}
 {{- end }}
-{{- include "deploy.volumeMounts.resources" . }}
