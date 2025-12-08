@@ -13,10 +13,15 @@ spec:
   {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.replicaCount }}
   {{- end }}
-  {{- if .Values.strategy }}
   strategy:
+    {{- if .Values.strategy }}
     {{- toYaml .Values.strategy | nindent 4 }}
-  {{- end }}
+    {{- else }}
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 50%
+      maxUnavailable: 0
+    {{- end }}
   selector:
     matchLabels:
       {{- include "deploy.selectorLabels" . | nindent 6 }}

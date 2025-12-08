@@ -21,12 +21,13 @@ replicaCount: 1
 # Deployment type (deployment or statefulset)
 deploymentType: "deployment"
 
-# Rolling update strategy configuration for deployments
+# Rolling update strategy configuration (optional)
+# If not specified, will use default zero-downtime strategy
 strategy:
-  type: RollingUpdate
-  rollingUpdate:
-    maxSurge: 50%         # Allow 50% extra pods during update
-    maxUnavailable: 0     # Don't allow any pods to be unavailable during update
+  # type: RollingUpdate
+  # rollingUpdate:
+  #   maxSurge: 50%         # Allow 50% extra pods during update
+  #   maxUnavailable: 0     # Don't allow any pods to be unavailable during update
 
 # Image configuration
 image:
