@@ -1,0 +1,42 @@
+# CronJob Worker Values Example for pfnapp/deploy
+app:
+  name: "worker-app"
+
+deploymentType: "deployment"
+replicaCount: 1
+
+image:
+  repository: "registry-apac.pfnapp.com/pfnapp-projects-green-prod-workers"
+  tag: "105"
+
+configMap:
+  enabled: true
+  data:
+    NODE_ENV: "production"
+
+externalSecret:
+  enabled: true
+  name: "worker-app-kv"
+  secretStoreRef:
+    kind: "ClusterSecretStore"
+    name: "vault-backend"
+  target:
+    name: "worker-app-secret"
+  dataFrom:
+    - extract:
+        key: "pfnapp/prod/worker-app"
+  autoEnvFrom: true
+
+cronjobs:
+  enabled: true
+  items:
+    - name: "scheduler"
+      schedule: "*/5 * * * *"
+      command: ["bun", "run", "dist/schedule-runner.js"]
+      resources:
+        requests:
+          cpu: "100m"
+          memory: "128Mi"
+        limits:
+          cpu: "256m"
+          memory: "256Mi"
