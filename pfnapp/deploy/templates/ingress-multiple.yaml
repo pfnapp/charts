@@ -16,7 +16,7 @@ apiVersion: extensions/v1beta1
 {{- end }}
 kind: Ingress
 metadata:
-  name: {{ $fullName }}-{{ $name }}
+  name: {{ printf "%s-%s" $fullName $name | trunc 63 | trimSuffix "-" }}
   labels:
     {{- include "deploy.labels" $ | nindent 4 }}
     ingress-name: {{ $name }}

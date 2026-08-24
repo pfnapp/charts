@@ -103,7 +103,7 @@ Generate volume mount ConfigMap and Secret resources
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ include "deploy.fullname" $ }}-{{ $configMap.name }}
+  name: {{ printf "%s-%s" (include "deploy.fullname" $) $configMap.name | trunc 63 | trimSuffix "-" }}
   labels:
     {{- include "deploy.labels" $ | nindent 4 }}
 data:
@@ -124,7 +124,7 @@ data:
 apiVersion: v1
 kind: Secret
 metadata:
-  name: {{ include "deploy.fullname" $ }}-{{ $secret.name }}
+  name: {{ printf "%s-%s" (include "deploy.fullname" $) $secret.name | trunc 63 | trimSuffix "-" }}
   labels:
     {{- include "deploy.labels" $ | nindent 4 }}
 type: Opaque

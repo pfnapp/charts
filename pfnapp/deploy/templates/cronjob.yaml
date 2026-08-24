@@ -6,7 +6,7 @@
 apiVersion: batch/v1
 kind: CronJob
 metadata:
-  name: {{ default (printf "%s-%s" (include "deploy.fullname" $root) $cron.name) $cron.fullnameOverride | trunc 63 | trimSuffix "-" }}
+  name: {{ default (printf "%s-%s" (include "deploy.fullname" $root) $cron.name) $cron.fullnameOverride | trunc 52 | trimSuffix "-" }}
   labels:
     {{- include "deploy.labels" $root | nindent 4 }}
     {{- with $cron.labels }}
