@@ -389,6 +389,56 @@ secret:
     # DATABASE_PASSWORD: "c2VjcmV0cGFzcw=="  # base64 encoded
     # API_TOKEN: "dG9rZW4xMjM="          # base64 encoded
 
+
+# ExternalSecret integration (creates ExternalSecret resource for External Secrets Operator / Vault)
+externalSecret:
+  # -- Enable ExternalSecret creation
+  enabled: false
+  # -- Resource name (defaults to {{ fullname }}-kv)
+  name: ""
+  # -- Refresh interval for syncing secrets from Vault
+  refreshInterval: "24h"
+  # -- SecretStore or ClusterSecretStore reference
+  secretStoreRef:
+    kind: ClusterSecretStore
+    name: vault-backend
+  # -- Target Kubernetes Secret specification
+  target:
+    name: ""                      # Default: {{ fullname }}-secret
+    creationPolicy: Owner         # Owner, Orphan, Merge, None
+    deletionPolicy: Retain        # Retain, Delete, Merge
+  # -- Extract whole secret map from a Vault path
+  dataFrom: []
+    # Example:
+    # - extract:
+    #     key: "pfnapp/dev/myapp"
+  # -- Specific key-value property mapping (optional)
+  data: []
+    # Example:
+    # - secretKey: DATABASE_PASSWORD
+    #   remoteRef:
+    #     key: "pfnapp/dev/myapp"
+    #     property: password
+  # -- Automatically inject the created secret into containers via envFrom
+  autoEnvFrom: true
+
+# Multiple ExternalSecrets configuration (optional list)
+externalSecrets: []
+  # Example:
+  # - name: "db-credentials"
+  #   enabled: true
+  #   refreshInterval: "24h"
+  #   secretStoreRef:
+  #     kind: ClusterSecretStore
+  #     name: vault-backend
+  #   target:
+  #     name: "myapp-db-secret"
+  #     creationPolicy: Owner
+  #     deletionPolicy: Retain
+  #   dataFrom:
+  #     - extract:
+  #         key: "pfnapp/dev/db"
+  #   autoEnvFrom: true
 # Environment variables (supports both direct values and references to external ConfigMaps/Secrets)
 env: []
   # Examples:
@@ -683,3 +733,48 @@ volumeSecrets:
     #   subPath: "" # e.g., "username"
     #   # -- (Optional) Mount the volume as read-only (recommended for secrets)
     #   readOnly: true
+
+
+# ==============================================================================
+# CronJob Configuration
+# ==============================================================================
+# Allows running scheduled CronJobs alongside or independently of the Deployment/StatefulSet
+cronjobs:
+  # -- Enable CronJobs deployment
+  enabled: false
+  # -- Default settings applied to all items if not overridden per item
+  defaults:
+    concurrencyPolicy: "Forbid"         # Allow, Forbid, Replace
+    restartPolicy: "Never"              # Never, OnFailure
+    successfulJobsHistoryLimit: 3
+    failedJobsHistoryLimit: 3
+    backoffLimit: 1
+  # -- List of CronJobs to deploy
+  items: []
+    # Example:
+    # - name: "scheduler-service"
+    #   enabled: true
+    #   schedule: "* * * * *"
+    #   concurrencyPolicy: "Forbid"
+    #   restartPolicy: "Never"
+    #   successfulJobsHistoryLimit: 5
+    #   failedJobsHistoryLimit: 5
+    #   backoffLimit: 1
+    #   # Custom command & args (defaults to root image.command / image.args if omitted)
+    #   command: ["bun", "run", "dist/schedule-runner.js"]
+    #   args: []
+    #   # Optional image override (defaults to root image if omitted)
+    #   image: {}
+    #     # repository: "registry-apac.pfnapp.com/pfnapp-projects-green-prod-workers"
+    #     # tag: "105"
+    #     # pullPolicy: "IfNotPresent"
+    #   # Optional resource requests/limits (defaults to root resources if omitted)
+    #   resources:
+    #     requests:
+    #       cpu: "100m"
+    #       memory: "128Mi"
+    #     limits:
+    #       cpu: "256m"
+    #       memory: "256Mi"
+    #   # Optional overrides for env, envFrom, nodeSelector, tolerations, affinity, volumeMounts, volumes
+    #   # If omitted, they inherit the corresponding root values

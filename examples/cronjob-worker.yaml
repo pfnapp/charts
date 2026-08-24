@@ -1,0 +1,83 @@
+# Deployment + CronJob Example (Worker & Scheduler)
+# Target: Worker application running a continuous consumer deployment + scheduled cronjobs
+# Chart: pfnapp/deploy
+
+app:
+  name: "pfnapp-worker"
+
+deploymentType: "deployment"
+replicaCount: 1
+
+image:
+  repository: "registry-apac.pfnapp.com/pfnapp-projects-green-prod-workers"
+  tag: "105"
+  pullPolicy: "IfNotPresent"
+
+podAnnotations:
+  reloader.stakater.com/auto: "true"
+
+configMap:
+  enabled: true
+  data:
+    NODE_ENV: "production"
+    WORKER_MODE: "consumer"
+
+# Automatic Vault ExternalSecret creation & pod injection
+externalSecret:
+  enabled: true
+  name: "pfnapp-worker-kv"
+  refreshInterval: "24h"
+  secretStoreRef:
+    kind: "ClusterSecretStore"
+    name: "vault-backend"
+  target:
+    name: "pfnapp-v2-prod-secret"
+    creationPolicy: "Owner"
+    deletionPolicy: "Retain"
+  dataFrom:
+    - extract:
+        key: "pfnapp/pfnapp-prod"
+  autoEnvFrom: true
+
+logging:
+  enabled: true
+
+nodeSelector:
+  region: "Singapore"
+
+tolerations:
+  - key: "nodeType"
+    operator: "Equal"
+    value: "AppNVMe"
+    effect: "NoSchedule"
+
+resources:
+  requests:
+    cpu: "50m"
+    memory: "128Mi"
+  limits:
+    cpu: "500m"
+    memory: "512Mi"
+
+# ==============================================================================
+# CronJob Configuration (inherits image, nodeSelector, tolerations, secrets)
+# ==============================================================================
+cronjobs:
+  enabled: true
+  defaults:
+    concurrencyPolicy: "Forbid"
+    restartPolicy: "Never"
+    successfulJobsHistoryLimit: 5
+    failedJobsHistoryLimit: 5
+    backoffLimit: 1
+  items:
+    - name: "scheduler-service"
+      schedule: "* * * * *"
+      command: ["bun", "run", "dist/schedule-runner.js"]
+      resources:
+        requests:
+          cpu: "100m"
+          memory: "128Mi"
+        limits:
+          cpu: "256m"
+          memory: "256Mi"

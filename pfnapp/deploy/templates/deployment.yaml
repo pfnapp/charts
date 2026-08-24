@@ -164,7 +164,8 @@ spec:
               {{- end }}
             {{- end }}
           {{- end }}
-          {{- if or .Values.configMap.enabled .Values.secret.enabled .Values.envFrom }}
+          {{- $hasExternalSecretEnvFrom := or (and .Values.externalSecret .Values.externalSecret.enabled (ne .Values.externalSecret.autoEnvFrom false)) (and .Values.externalSecrets (gt (len .Values.externalSecrets) 0)) }}
+          {{- if or .Values.configMap.enabled .Values.secret.enabled .Values.envFrom $hasExternalSecretEnvFrom }}
           envFrom:
             {{- if .Values.configMap.enabled }}
             - configMapRef:
@@ -173,6 +174,19 @@ spec:
             {{- if .Values.secret.enabled }}
             - secretRef:
                 name: {{ include "deploy.fullname" . }}-secret
+            {{- end }}
+            {{- if and .Values.externalSecret .Values.externalSecret.enabled (ne .Values.externalSecret.autoEnvFrom false) }}
+            - secretRef:
+                name: {{ .Values.externalSecret.target.name | default (printf "%s-secret" (include "deploy.fullname" .)) }}
+            {{- end }}
+            {{- if .Values.externalSecrets }}
+            {{- $root := . }}
+            {{- range $index, $es := .Values.externalSecrets }}
+            {{- if and (default true $es.enabled) (ne $es.autoEnvFrom false) }}
+            - secretRef:
+                name: {{ $es.target.name | default (printf "%s-%s-secret" (include "deploy.fullname" $root) ($es.name | default (printf "es-%d" $index))) }}
+            {{- end }}
+            {{- end }}
             {{- end }}
             {{- range .Values.envFrom }}
             {{- if .configMapRef }}
@@ -188,7 +202,7 @@ spec:
                 optional: {{ .secretRef.optional }}
                 {{- end }}
             {{- end }}
-          {{- end }}
+            {{- end }}
           {{- end }}
           {{- if or .Values.volumeMounts .Values.simpleMounts .Values.simpleVolumes .Values.simpleStorage .Values.volumeConfigMaps.enabled .Values.volumeSecrets.enabled }}
           volumeMounts:
