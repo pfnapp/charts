@@ -549,6 +549,66 @@ env:
     value: "production"
 ```
 
+### Deployment + CronJob (Worker & Scheduler)
+
+```yaml
+app:
+  name: "worker-service"
+
+image:
+  repository: "myregistry/myworker"
+  tag: "105"
+
+replicaCount: 1
+
+configMap:
+  enabled: true
+  data:
+    NODE_ENV: production
+
+cronjobs:
+  enabled: true
+  items:
+    - name: "scheduler-service"
+      schedule: "* * * * *"
+      concurrencyPolicy: "Forbid"
+      command: ["bun", "run", "dist/schedule-runner.js"]
+      resources:
+        requests:
+          cpu: "100m"
+          memory: "128Mi"
+        limits:
+          cpu: "256m"
+          memory: "256Mi"
+```
+
+### ExternalSecret (Vault Integration)
+
+```yaml
+app:
+  name: "secure-api"
+
+image:
+  repository: "myregistry/secure-api"
+  tag: "1.0.0"
+
+externalSecret:
+  enabled: true
+  name: "secure-api-kv"
+  refreshInterval: "24h"
+  secretStoreRef:
+    kind: ClusterSecretStore
+    name: vault-backend
+  target:
+    name: "secure-api-secret"
+    creationPolicy: Owner
+    deletionPolicy: Retain
+  dataFrom:
+    - extract:
+        key: "pfnapp/dev/secure-api"
+  autoEnvFrom: true # Automatically injected into pod envFrom
+```
+
 ## Migration from Combined Chart
 
 If migrating from the previous combined chart:

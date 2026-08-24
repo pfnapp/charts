@@ -1,0 +1,251 @@
+{{- if and .Values.cronjobs .Values.cronjobs.enabled }}
+{{- $root := . }}
+{{- range $index, $cron := .Values.cronjobs.items }}
+{{- if default true $cron.enabled }}
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ default (printf "%s-%s" (include "deploy.fullname" $root) $cron.name) $cron.fullnameOverride | trunc 63 | trimSuffix "-" }}
+  labels:
+    {{- include "deploy.labels" $root | nindent 4 }}
+    {{- with $cron.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- with $cron.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  schedule: {{ $cron.schedule | quote }}
+  {{- if $cron.concurrencyPolicy }}
+  concurrencyPolicy: {{ $cron.concurrencyPolicy }}
+  {{- else if $root.Values.cronjobs.defaults }}
+  concurrencyPolicy: {{ $root.Values.cronjobs.defaults.concurrencyPolicy | default "Forbid" }}
+  {{- end }}
+  {{- if hasKey $cron "successfulJobsHistoryLimit" }}
+  successfulJobsHistoryLimit: {{ $cron.successfulJobsHistoryLimit }}
+  {{- else if and $root.Values.cronjobs.defaults (hasKey $root.Values.cronjobs.defaults "successfulJobsHistoryLimit") }}
+  successfulJobsHistoryLimit: {{ $root.Values.cronjobs.defaults.successfulJobsHistoryLimit }}
+  {{- end }}
+  {{- if hasKey $cron "failedJobsHistoryLimit" }}
+  failedJobsHistoryLimit: {{ $cron.failedJobsHistoryLimit }}
+  {{- else if and $root.Values.cronjobs.defaults (hasKey $root.Values.cronjobs.defaults "failedJobsHistoryLimit") }}
+  failedJobsHistoryLimit: {{ $root.Values.cronjobs.defaults.failedJobsHistoryLimit }}
+  {{- end }}
+  {{- if $cron.suspend }}
+  suspend: {{ $cron.suspend }}
+  {{- end }}
+  {{- if $cron.startingDeadlineSeconds }}
+  startingDeadlineSeconds: {{ $cron.startingDeadlineSeconds }}
+  {{- end }}
+  jobTemplate:
+    metadata:
+      labels:
+        {{- include "deploy.selectorLabels" $root | nindent 8 }}
+        {{- with $cron.labels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with $cron.jobAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      {{- if hasKey $cron "backoffLimit" }}
+      backoffLimit: {{ $cron.backoffLimit }}
+      {{- else if and $root.Values.cronjobs.defaults (hasKey $root.Values.cronjobs.defaults "backoffLimit") }}
+      backoffLimit: {{ $root.Values.cronjobs.defaults.backoffLimit }}
+      {{- end }}
+      {{- if $cron.activeDeadlineSeconds }}
+      activeDeadlineSeconds: {{ $cron.activeDeadlineSeconds }}
+      {{- end }}
+      {{- if $cron.ttlSecondsAfterFinished }}
+      ttlSecondsAfterFinished: {{ $cron.ttlSecondsAfterFinished }}
+      {{- end }}
+      template:
+        metadata:
+          labels:
+            {{- include "deploy.selectorLabels" $root | nindent 12 }}
+            {{- with $cron.labels }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          annotations:
+            {{- if $root.Values.podAnnotations }}
+            {{- toYaml $root.Values.podAnnotations | nindent 12 }}
+            {{- end }}
+            {{- if $cron.podAnnotations }}
+            {{- toYaml $cron.podAnnotations | nindent 12 }}
+            {{- end }}
+        spec:
+          restartPolicy: {{ $cron.restartPolicy | default (and $root.Values.cronjobs.defaults $root.Values.cronjobs.defaults.restartPolicy) | default "Never" }}
+          {{- with $cron.imagePullSecrets | default $root.Values.imagePullSecrets }}
+          imagePullSecrets:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          serviceAccountName: {{ $cron.serviceAccountName | default (include "deploy.serviceAccountName" $root) }}
+          securityContext:
+            {{- toYaml ($cron.podSecurityContext | default $root.Values.podSecurityContext) | nindent 12 }}
+          {{- with $cron.nodeSelector | default $root.Values.nodeSelector }}
+          nodeSelector:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- $tolerations := $cron.tolerations | default $root.Values.tolerations }}
+          {{- if or $tolerations $root.Values.logging.enabled }}
+          tolerations:
+            {{- if $tolerations }}
+            {{- toYaml $tolerations | nindent 12 }}
+            {{- end }}
+            {{- if $root.Values.logging.enabled }}
+            - key: "logging"
+              operator: "Equal"
+              value: "true"
+              effect: "NoSchedule"
+            {{- end }}
+          {{- end }}
+          {{- with $cron.affinity | default $root.Values.affinity }}
+          affinity:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          containers:
+            - name: {{ $cron.name | default "cronjob" }}
+              securityContext:
+                {{- toYaml ($cron.securityContext | default $root.Values.securityContext) | nindent 16 }}
+              {{- $imageRepo := (and $cron.image $cron.image.repository) | default $root.Values.image.repository }}
+              {{- $imageTag := (and $cron.image $cron.image.tag) | default $root.Values.image.tag }}
+              {{- $pullPolicy := (and $cron.image $cron.image.pullPolicy) | default $root.Values.image.pullPolicy }}
+              image: "{{ $imageRepo }}:{{ $imageTag }}"
+              imagePullPolicy: {{ $pullPolicy }}
+              {{- if $cron.command }}
+              command:
+                {{- range $cron.command }}
+                - {{ . | quote }}
+                {{- end }}
+              {{- else if $root.Values.image.command }}
+              command:
+                {{- range $root.Values.image.command }}
+                - {{ . | quote }}
+                {{- end }}
+              {{- end }}
+              {{- if $cron.args }}
+              args:
+                {{- range $cron.args }}
+                - {{ . | quote }}
+                {{- end }}
+              {{- else if $root.Values.image.args }}
+              args:
+                {{- range $root.Values.image.args }}
+                - {{ . | quote }}
+                {{- end }}
+              {{- end }}
+              resources:
+                {{- toYaml ($cron.resources | default $root.Values.resources) | nindent 16 }}
+              {{- $envList := $cron.env | default $root.Values.env }}
+              {{- if $envList }}
+              env:
+                {{- range $envList }}
+                - name: {{ .name }}
+                  {{- if .value }}
+                  value: {{ .value | quote }}
+                  {{- else if .valueFrom }}
+                  valueFrom:
+                    {{- if .valueFrom.configMapKeyRef }}
+                    configMapKeyRef:
+                      name: {{ .valueFrom.configMapKeyRef.name }}
+                      key: {{ .valueFrom.configMapKeyRef.key }}
+                      {{- if .valueFrom.configMapKeyRef.optional }}
+                      optional: {{ .valueFrom.configMapKeyRef.optional }}
+                      {{- end }}
+                    {{- else if .valueFrom.secretKeyRef }}
+                    secretKeyRef:
+                      name: {{ .valueFrom.secretKeyRef.name }}
+                      key: {{ .valueFrom.secretKeyRef.key }}
+                      {{- if .valueFrom.secretKeyRef.optional }}
+                      optional: {{ .valueFrom.secretKeyRef.optional }}
+                      {{- end }}
+                    {{- else if .valueFrom.fieldRef }}
+                    fieldRef:
+                      fieldPath: {{ .valueFrom.fieldRef.fieldPath }}
+                    {{- else if .valueFrom.resourceFieldRef }}
+                    resourceFieldRef:
+                      resource: {{ .valueFrom.resourceFieldRef.resource }}
+                      {{- if .valueFrom.resourceFieldRef.containerName }}
+                      containerName: {{ .valueFrom.resourceFieldRef.containerName }}
+                      {{- end }}
+                      {{- if .valueFrom.resourceFieldRef.divisor }}
+                      divisor: {{ .valueFrom.resourceFieldRef.divisor }}
+                      {{- end }}
+                    {{- end }}
+                  {{- end }}
+                {{- end }}
+              {{- end }}
+              {{- $hasExternalSecretEnvFrom := or (and $root.Values.externalSecret $root.Values.externalSecret.enabled (ne $root.Values.externalSecret.autoEnvFrom false)) (and $root.Values.externalSecrets (gt (len $root.Values.externalSecrets) 0)) }}
+              {{- $envFromList := $cron.envFrom | default $root.Values.envFrom }}
+              {{- if or $root.Values.configMap.enabled $root.Values.secret.enabled $envFromList $hasExternalSecretEnvFrom }}
+              envFrom:
+                {{- if $root.Values.configMap.enabled }}
+                - configMapRef:
+                    name: {{ include "deploy.fullname" $root }}-config
+                {{- end }}
+                {{- if $root.Values.secret.enabled }}
+                - secretRef:
+                    name: {{ include "deploy.fullname" $root }}-secret
+                {{- end }}
+                {{- if and $root.Values.externalSecret $root.Values.externalSecret.enabled (ne $root.Values.externalSecret.autoEnvFrom false) }}
+                - secretRef:
+                    name: {{ $root.Values.externalSecret.target.name | default (printf "%s-secret" (include "deploy.fullname" $root)) }}
+                {{- end }}
+                {{- if $root.Values.externalSecrets }}
+                {{- range $esIndex, $es := $root.Values.externalSecrets }}
+                {{- if and (default true $es.enabled) (ne $es.autoEnvFrom false) }}
+                - secretRef:
+                    name: {{ $es.target.name | default (printf "%s-%s-secret" (include "deploy.fullname" $root) ($es.name | default (printf "es-%d" $esIndex))) }}
+                {{- end }}
+                {{- end }}
+                {{- end }}
+                {{- range $envFromList }}
+                {{- if .configMapRef }}
+                - configMapRef:
+                    name: {{ .configMapRef.name }}
+                    {{- if .configMapRef.optional }}
+                    optional: {{ .configMapRef.optional }}
+                    {{- end }}
+                {{- else if .secretRef }}
+                - secretRef:
+                    name: {{ .secretRef.name }}
+                    {{- if .secretRef.optional }}
+                    optional: {{ .secretRef.optional }}
+                    {{- end }}
+                {{- end }}
+                {{- end }}
+              {{- end }}
+              {{- if or $cron.volumeMounts $root.Values.volumeMounts $root.Values.simpleMounts $root.Values.volumeConfigMaps.enabled $root.Values.volumeSecrets.enabled }}
+              volumeMounts:
+                {{- with $cron.volumeMounts | default $root.Values.volumeMounts }}
+                {{- toYaml . | nindent 16 }}
+                {{- end }}
+                {{- range $vIndex, $mount := $root.Values.simpleMounts }}
+                - name: simple-mount-{{ $vIndex }}
+                  mountPath: {{ $mount.mountPath }}
+                {{- end }}
+                {{- include "deploy.volumeMounts.mounts" $root | nindent 16 }}
+              {{- end }}
+          {{- if or $cron.volumes $root.Values.volumes $root.Values.simpleMounts $root.Values.volumeConfigMaps.enabled $root.Values.volumeSecrets.enabled }}
+          volumes:
+            {{- with $cron.volumes | default $root.Values.volumes }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+            {{- range $vIndex, $mount := $root.Values.simpleMounts }}
+            - name: simple-mount-{{ $vIndex }}
+              {{- if $mount.configMap }}
+              configMap:
+                name: {{ $mount.configMap }}
+              {{- else if $mount.secret }}
+              secret:
+                secretName: {{ $mount.secret }}
+              {{- end }}
+            {{- end }}
+            {{- include "deploy.volumeMounts.volumes" $root | nindent 12 }}
+          {{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
