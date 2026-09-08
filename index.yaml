@@ -38,6 +38,26 @@ entries:
   deploy:
   - apiVersion: v2
     appVersion: latest
+    created: "2026-09-08T18:02:20.617299292Z"
+    description: A Helm chart for deploying stateless and stateful applications as
+      Deployments or StatefulSets
+    digest: 46238c062cc28d185694b0e8fc4ab6a21c05f82c8984650d456dbba9081ff091
+    home: https://pfnapp.github.io/charts
+    keywords:
+    - deployment
+    - ingress
+    - haproxy
+    - configmap
+    - secret
+    maintainers:
+    - name: pfnapp-team
+    name: deploy
+    type: application
+    urls:
+    - https://github.com/pfnapp/charts/releases/download/deploy-2.12.4/deploy-2.12.4.tgz
+    version: 2.12.4
+  - apiVersion: v2
+    appVersion: latest
     created: "2026-09-08T15:54:08.644620323Z"
     description: A Helm chart for deploying stateless and stateful applications as
       Deployments or StatefulSets
@@ -1154,4 +1174,4 @@ entries:
     urls:
     - https://github.com/pfnapp/charts/releases/download/sts-2.0.0/sts-2.0.0.tgz
     version: 2.0.0
-generated: "2026-09-08T15:54:08.644847317Z"
+generated: "2026-09-08T18:02:20.813710823Z"
