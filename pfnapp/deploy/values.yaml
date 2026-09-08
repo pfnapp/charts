@@ -208,6 +208,8 @@ ingress: {}
   #     paths:
   #       - path: /
   #         pathType: Prefix
+  #         serviceName: "custom-service"  # Optional: defaults to {{ fullname }}
+  #         servicePort: 8080              # Optional: defaults to service.port
   # tls: []
 
 # Multiple Ingresses configuration (advanced)
@@ -225,6 +227,8 @@ ingresses: {}
   #       paths:
   #         - path: /
   #           pathType: Prefix
+  #           serviceName: "custom-service"  # Optional: defaults to {{ fullname }}
+  #           servicePort: 8080              # Optional: defaults to service.port
   #   tls:
   #     - secretName: myapp-tls
   #       hosts:
@@ -241,6 +245,8 @@ ingresses: {}
   #       paths:
   #         - path: /admin
   #           pathType: Prefix
+  #           serviceName: "admin-service"   # Optional: defaults to {{ fullname }}
+  #           servicePort: 9000              # Optional: defaults to service.port
   #   tls:
   #     - secretName: admin-tls
   #       hosts:
@@ -261,6 +267,8 @@ ingressDomains: []
   #   paths:
   #     - path: /
   #       pathType: Prefix
+  #       serviceName: "custom-service"    # Optional: defaults to {{ fullname }}
+  #       servicePort: 8080                # Optional: defaults to service.port
   # - enabled: true
   #   host: "admin.myapp.example.com"
   #   className: "nginx"
@@ -289,9 +297,12 @@ simpleIngress: []
   #     target: "cname-sg.pfnapp.com"  # external-dns target
   #     cloudflareProxied: false  # Optional: set cloudflare proxy status
   #   # paths:  # Optional: defaults to [{"path": "/", "pathType": "Prefix"}]
+  #   #   - path: /api
+  #   #     pathType: Prefix
+  #   #     serviceName: "api-service"     # Optional: route path to a different backend service
+  #   #     servicePort: 3301              # Optional: custom backend service port (number or name)
   #   #   - path: /
   #   #     pathType: Prefix
-  #   
   #   # HAProxy-specific configuration
   #   haproxy:
   #     # Load balancing configuration
