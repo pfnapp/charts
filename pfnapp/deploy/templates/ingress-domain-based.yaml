@@ -45,14 +45,24 @@ spec:
             pathType: {{ .pathType }}
             {{- end }}
             backend:
+              {{- $targetServiceName := .serviceName | default .service_name | default $fullName }}
+              {{- $targetServicePort := .servicePort | default .service_port | default .port | default $svcPort }}
               {{- if semverCompare ">=1.19-0" $.Capabilities.KubeVersion.GitVersion }}
               service:
-                name: {{ $fullName }}
+                name: {{ $targetServiceName }}
                 port:
-                  number: {{ $svcPort }}
+                  {{- if or (typeIs "string" $targetServicePort) (typeIs "int" $targetServicePort) (typeIs "float64" $targetServicePort) }}
+                    {{- if regexMatch "^[0-9]+$" (toString $targetServicePort) }}
+                  number: {{ $targetServicePort }}
+                    {{- else }}
+                  name: {{ $targetServicePort }}
+                    {{- end }}
+                  {{- else }}
+                  number: {{ $targetServicePort }}
+                  {{- end }}
               {{- else }}
-              serviceName: {{ $fullName }}
-              servicePort: {{ $svcPort }}
+              serviceName: {{ $targetServiceName }}
+              servicePort: {{ $targetServicePort }}
               {{- end }}
           {{- end }}
 {{- end }}
