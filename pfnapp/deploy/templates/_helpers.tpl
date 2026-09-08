@@ -60,6 +60,35 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
 {{/*
+Create a default fully qualified cronjob app name.
+We truncate at 63 chars because some Kubernetes name fields are limited to this.
+*/}}
+{{- define "deploy.cronjobAppName" -}}
+{{- printf "%s-cronjob" (include "deploy.appName" . | trunc 54 | trimSuffix "-") | trunc 63 | trimSuffix "-" -}}
+{{- end }}
+
+{{/*
+CronJob selector labels
+*/}}
+{{- define "deploy.cronjobSelectorLabels" -}}
+app.kubernetes.io/name: {{ include "deploy.cronjobAppName" . }}
+app.kubernetes.io/instance: {{ .Release.Name }}
+app.kubernetes.io/component: cronjob
+{{- end }}
+
+{{/*
+CronJob Common labels
+*/}}
+{{- define "deploy.cronjobLabels" -}}
+helm.sh/chart: {{ include "deploy.chart" . }}
+{{ include "deploy.cronjobSelectorLabels" . }}
+{{- if .Values.image.tag }}
+app.kubernetes.io/version: {{ .Values.image.tag | quote }}
+{{- end }}
+app.kubernetes.io/managed-by: {{ .Release.Service }}
+{{- end }}
+
+{{/*
 Create the name of the service account to use
 */}}
 {{/*
