@@ -2,7 +2,7 @@ apiVersion: v2
 name: deploy
 description: A Helm chart for deploying stateless and stateful applications as Deployments or StatefulSets
 type: application
-version: 2.12.3
+version: 2.12.4
 appVersion: "latest"
 home: https://pfnapp.github.io/charts
 maintainers:
