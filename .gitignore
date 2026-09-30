@@ -161,3 +161,5 @@ chart-testing/
 .helm/
 
 tasks.md
+# executor runs (agent-run)
+/.runs/
