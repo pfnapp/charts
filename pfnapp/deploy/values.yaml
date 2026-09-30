@@ -53,6 +53,13 @@ imagePullSecrets: []
   # Example:
   # - name: myregistrykey
 
+# Init containers (standard Kubernetes initContainers) - for one-shot restore/init use cases
+initContainers: []
+  # Example:
+  # - name: restore-data
+  #   image: busybox
+  #   command: ["sh", "-c", "cp -r /backup/* /data/"]
+
 # Service account
 serviceAccount:
   create: false                   # Automatically set to true when RBAC is enabled and no name is provided
