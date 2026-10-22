@@ -4,6 +4,7 @@
 ---
 apiVersion: v1
 kind: ConfigMap
+metadata:
   name: {{ printf "%s-%s" (include "deploy.fullname" $) $configMap.name | trunc 63 | trimSuffix "-" }}
   labels:
     {{- include "deploy.labels" $ | nindent 4 }}
