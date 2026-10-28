@@ -334,6 +334,10 @@ autoscaling:
 
 ### Security Settings
 
+#### User Namespaces (hostUsers)
+
+`hostUsers: false` is the default: container root (UID 0) maps to an unprivileged UID on the host, so images that start as root keep working while a container escape no longer yields host root. Requires Kubernetes 1.30+ and kernel 6.3+ on the node. Set `hostUsers: true` to opt out, or `null` to omit the field. CronJobs can override it per job.
+
 #### Pod Security Context
 
 ```yaml
