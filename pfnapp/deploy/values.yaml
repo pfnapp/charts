@@ -104,6 +104,11 @@ podAnnotations: {}
   # prometheus.io/scrape: "true"
   # prometheus.io/port: "8080"
 
+# User namespaces: container root (UID 0) maps to an unprivileged UID on the host.
+# false = enabled (default). Set to true to share the host user namespace, or null to omit the field.
+# Incompatible with hostPath/hostNetwork/hostPID and volumes without idmapped-mount support.
+hostUsers: false
+
 # Pod security context
 podSecurityContext: {}
   # Example:

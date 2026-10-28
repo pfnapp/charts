@@ -83,6 +83,11 @@ spec:
             {{- toYaml . | nindent 12 }}
           {{- end }}
           serviceAccountName: {{ $cron.serviceAccountName | default (include "deploy.serviceAccountName" $root) }}
+          {{- $hostUsers := $root.Values.hostUsers }}
+          {{- if hasKey $cron "hostUsers" }}{{- $hostUsers = $cron.hostUsers }}{{- end }}
+          {{- if not (kindIs "invalid" $hostUsers) }}
+          hostUsers: {{ $hostUsers }}
+          {{- end }}
           securityContext:
             {{- toYaml ($cron.podSecurityContext | default $root.Values.podSecurityContext) | nindent 12 }}
           {{- with $cron.nodeSelector | default $root.Values.nodeSelector }}
